@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tech Post Maker"
+  short_description: "Write personal engineer technical posts"
+  default_prompt: "Use $tech-post-maker to outline, draft, or polish a first-person technical post in a calm personal engineer voice."
+
+policy:
+  allow_implicit_invocation: true
