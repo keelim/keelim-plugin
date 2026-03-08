@@ -15,7 +15,30 @@ A personal skill collection for both Codex and Claude.
 ## Current skills
 - `release-automation`: a date-based Android release workflow for updating `versionCode`, checking the release PR, and dispatching `app_deploy.yml` with `dry-run`, `confirm`, and `execute` modes.
 
-## Installation
+## Install with the Vercel skills CLI
+
+List the skills available from this repository:
+
+```bash
+npx skills add https://github.com/keelim/keelim-skill --list
+```
+
+Install `release-automation` for both Codex and Claude Code in the current project:
+
+```bash
+npx skills add https://github.com/keelim/keelim-skill \
+  --skill release-automation \
+  -a codex \
+  -a claude-code \
+  -y \
+  --copy
+```
+
+This installs the skill into:
+- `./.agents/skills/release-automation`
+- `./.claude/skills/release-automation`
+
+## Manual install
 
 ### Codex
 ```bash
@@ -28,5 +51,6 @@ ln -s /Users/keelim/Desktop/keelim-skill/skills/release-automation ~/.claude/ski
 ```
 
 ## Notes
-- This repository currently uses manual symlink installation.
+- The Vercel skills CLI flow above was verified against this repository by listing and installing `release-automation` from GitHub.
+- The repository still supports manual symlink installation.
 - The first skill is intentionally docs-only, so the workflow stays easy to inspect and adapt.
