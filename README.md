@@ -20,13 +20,13 @@ A personal skill collection for both Codex and Claude.
 List the skills available from this repository:
 
 ```bash
-npx skills add https://github.com/keelim/keelim-skill --list
+npx skills add keelim/keelim-skill --list
 ```
 
 Install `release-automation` for both Codex and Claude Code in the current project:
 
 ```bash
-npx skills add https://github.com/keelim/keelim-skill \
+npx skills add keelim/keelim-skill \
   --skill release-automation \
   -a codex \
   -a claude-code \
@@ -37,6 +37,12 @@ npx skills add https://github.com/keelim/keelim-skill \
 This installs the skill into:
 - `./.agents/skills/release-automation`
 - `./.claude/skills/release-automation`
+
+If you prefer the full GitHub URL form, this also works:
+
+```bash
+npx skills add https://github.com/keelim/keelim-skill --list
+```
 
 ## Manual install
 
@@ -51,6 +57,9 @@ ln -s /Users/keelim/Desktop/keelim-skill/skills/release-automation ~/.claude/ski
 ```
 
 ## Notes
-- The Vercel skills CLI flow above was verified against this repository by listing and installing `release-automation` from GitHub.
+- The Vercel skills CLI flow was verified with both source formats:
+  - `keelim/keelim-skill`
+  - `https://github.com/keelim/keelim-skill`
+- Both formats successfully listed and installed `release-automation` for Codex and Claude Code.
 - The repository still supports manual symlink installation.
 - The first skill is intentionally docs-only, so the workflow stays easy to inspect and adapt.
