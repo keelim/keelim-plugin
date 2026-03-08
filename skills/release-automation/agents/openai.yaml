@@ -1,0 +1,7 @@
+interface:
+  display_name: "Release Automation"
+  short_description: "Prepare Android release PR and deploy flow"
+  default_prompt: "Use $release-automation to run a dry-run or execute the develop-to-main Android release workflow."
+
+policy:
+  allow_implicit_invocation: true
