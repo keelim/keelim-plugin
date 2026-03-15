@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ralplan Team"
+  short_description: "Plan with $ralplan, then execute with $team"
+  default_prompt: "Use $ralplan-team to scope a non-trivial feature with consensus planning first, then launch $team against the approved plan for parallel delivery."
+
+policy:
+  allow_implicit_invocation: true
