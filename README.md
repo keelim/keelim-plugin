@@ -1,4 +1,4 @@
-# keelim-skill
+# keelim-plugin
 
 A personal skill collection for both Codex and Claude.
 
@@ -21,13 +21,13 @@ A personal skill collection for both Codex and Claude.
 List the skills available from this repository:
 
 ```bash
-npx skills add keelim/keelim-skill --list
+npx skills add keelim/keelim-plugin --list
 ```
 
 Install a specific skill for both Codex and Claude Code in the current project:
 
 ```bash
-npx skills add keelim/keelim-skill \
+npx skills add keelim/keelim-plugin \
   --skill tech-post-maker \
   -a codex \
   -a claude-code \
@@ -42,24 +42,24 @@ This installs the skill into:
 If you prefer the full GitHub URL form, this also works:
 
 ```bash
-npx skills add https://github.com/keelim/keelim-skill --list
+npx skills add https://github.com/keelim/keelim-plugin --list
 ```
 
 ## Manual install
 
 ### Codex
 ```bash
-ln -s /Users/keelim/Desktop/keelim-skill/skills/tech-post-maker ~/.agents/skills/tech-post-maker
+ln -s /Users/keelim/Desktop/keelim-plugin/skills/tech-post-maker ~/.agents/skills/tech-post-maker
 ```
 
 ### Claude
 ```bash
-ln -s /Users/keelim/Desktop/keelim-skill/skills/tech-post-maker ~/.claude/skills/tech-post-maker
+ln -s /Users/keelim/Desktop/keelim-plugin/skills/tech-post-maker ~/.claude/skills/tech-post-maker
 ```
 
 ## Notes
 - The Vercel skills CLI flow was verified with both source formats:
-  - `keelim/keelim-skill`
-  - `https://github.com/keelim/keelim-skill`
+  - `keelim/keelim-plugin`
+  - `https://github.com/keelim/keelim-plugin`
 - The repository still supports manual symlink installation.
 - The current skills are intentionally docs-first, so the workflows stay easy to inspect and adapt.
