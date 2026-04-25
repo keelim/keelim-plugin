@@ -13,6 +13,8 @@ A personal skill collection for both Codex and Claude.
 - `skills/<skill-name>/agents/openai.yaml`: optional Codex UI metadata
 
 ## Current skills
+- `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
+- `ralplan-team`: a two-phase workflow for consensus planning with `$ralplan` before coordinated `$team` execution
 - `release-automation`: a date-based Android release workflow for updating `versionCode`, checking the release PR, and dispatching `app_deploy.yml` with `dry-run`, `confirm`, and `execute` modes
 - `tech-post-maker`: a writing skill for first-person technical posts in a calm personal engineer voice, especially build logs, case studies, workflow write-ups, and series posts
 

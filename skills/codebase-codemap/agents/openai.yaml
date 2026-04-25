@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase Codemap"
+  short_description: "Generate concise agent code maps"
+  default_prompt: "Use $codebase-codemap to generate an agent-friendly codebase map before changing this repository."
