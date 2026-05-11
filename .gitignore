@@ -5,3 +5,10 @@ __pycache__/
 .omx/learning/candidates/*.md
 .omx/learning/promoted/*.md
 .omx/learning/archive/*.md
+
+# Python bytecode/cache output
+__pycache__/
+*.py[cod]
+*$py.class
+.pycache/
+>>>>>>> Stashed changes
