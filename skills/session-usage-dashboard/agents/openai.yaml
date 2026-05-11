@@ -1,0 +1,4 @@
+interface:
+  display_name: "Session Usage Dashboard"
+  short_description: "Track tools, skills, and subagents"
+  default_prompt: "Use $session-usage-dashboard to build an offline HTML usage dashboard for the current Codex or Claude session."

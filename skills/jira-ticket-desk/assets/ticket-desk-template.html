@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <title>Jira Ticket Desk</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --panel-soft: #eef2f6;
+      --text: #171a1f;
+      --muted: #5f6877;
+      --line: #d8dee8;
+      --focus: #0f766e;
+      --next: #3b5bdb;
+      --waiting: #946200;
+      --blocked: #b42318;
+      --monitoring: #6f42c1;
+      --ignored: #667085;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101318;
+        --panel: #1b2028;
+        --panel-soft: #252b35;
+        --text: #f2f4f7;
+        --muted: #a9b1bf;
+        --line: #343d4c;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+    aside {
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    main {
+      width: min(1480px, calc(100vw - 252px));
+      margin: 0 auto;
+      padding: 22px 16px 36px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 4px; font-size: 24px; letter-spacing: 0; }
+    h2 { font-size: 14px; margin-bottom: 10px; letter-spacing: 0; }
+    h3 { font-size: 15px; line-height: 1.35; letter-spacing: 0; }
+    button, input {
+      font: inherit;
+      color: inherit;
+    }
+    .brand {
+      display: grid;
+      gap: 4px;
+    }
+    .brand strong { font-size: 16px; }
+    .brand span, .muted { color: var(--muted); }
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+    .nav button {
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      padding: 8px 9px;
+      cursor: pointer;
+    }
+    .nav button.is-active {
+      background: var(--panel-soft);
+      border-color: var(--line);
+      color: var(--text);
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0 14px;
+    }
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+    .summary-card span { color: var(--muted); font-size: 12px; }
+    .summary-card strong { font-size: 22px; }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    input[type="search"] {
+      width: min(520px, 100%);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 7px;
+      padding: 10px 12px;
+    }
+    .view-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .view-tabs button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 7px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+    .view-tabs button.is-active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+      margin-top: 14px;
+    }
+    .bucket {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      min-width: 0;
+      overflow: hidden;
+    }
+    .bucket-title {
+      width: 100%;
+      border: 0;
+      border-left: 5px solid var(--next);
+      background: var(--panel-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .bucket[data-bucket="focus"] .bucket-title { border-left-color: var(--focus); }
+    .bucket[data-bucket="waiting"] .bucket-title { border-left-color: var(--waiting); }
+    .bucket[data-bucket="blocked"] .bucket-title { border-left-color: var(--blocked); }
+    .bucket[data-bucket="monitoring"] .bucket-title { border-left-color: var(--monitoring); }
+    .bucket[data-bucket="ignored"] .bucket-title { border-left-color: var(--ignored); }
+    .bucket-body {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+    }
+    .bucket[aria-hidden="true"] .bucket-body { display: none; }
+    .ticket {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 11px;
+    }
+    .ticket[hidden] { display: none; }
+    .ticket-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+    }
+    dl {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px 10px;
+      margin: 0;
+    }
+    dt {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .label, .rule-chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      padding: 2px 7px;
+      font-size: 12px;
+    }
+    .local-rule {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+    .empty { color: var(--muted); margin: 0; }
+    .template-note {
+      margin-top: auto;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 1120px) {
+      .shell { grid-template-columns: 1fr; }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      main { width: min(100vw - 24px, 1480px); }
+      .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .board { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      main { padding-inline: 10px; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      dl { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <strong>Jira Ticket Desk</strong>
+        <span id="generated-at">Local data view</span>
+      </div>
+      <nav class="nav" id="bucket-nav" aria-label="Ticket buckets"></nav>
+      <p class="template-note">Offline template. Replace the embedded JSON data to refresh the desk.</p>
+    </aside>
+    <main>
+      <header>
+        <h1 id="desk-title">Jira Ticket Desk</h1>
+        <p class="muted" id="desk-subtitle">Read-only local view for ticket triage.</p>
+        <div class="summary" id="summary"></div>
+        <div class="toolbar">
+          <input id="filter" type="search" placeholder="Filter tickets by key, summary, status, assignee, or label" autocomplete="off">
+          <div class="view-tabs" id="view-tabs" aria-label="Desk views">
+            <button type="button" class="is-active" data-view="board">Board</button>
+            <button type="button" data-view="focus">Focus only</button>
+            <button type="button" data-view="ignored">Ignored</button>
+          </div>
+        </div>
+      </header>
+      <div class="board" id="board"></div>
+    </main>
+  </div>
+  <script>
+    window.TICKET_DESK_DATA = __TICKET_DESK_DATA__;
+  </script>
+  <script>
+    const data = window.TICKET_DESK_DATA || {};
+    const buckets = data.buckets || [];
+    const tickets = data.tickets || [];
+    const bucketNav = document.querySelector('#bucket-nav');
+    const summary = document.querySelector('#summary');
+    const board = document.querySelector('#board');
+    const filterInput = document.querySelector('#filter');
+    const viewTabs = document.querySelector('#view-tabs');
+    let activeBucket = 'all';
+    let activeView = 'board';
+
+    function text(value) {
+      return value == null || value === '' ? '' : String(value);
+    }
+
+    function appendText(parent, value) {
+      parent.appendChild(document.createTextNode(text(value)));
+    }
+
+    function countFor(bucketId) {
+      return tickets.filter((ticket) => ticket.bucket === bucketId).length;
+    }
+
+    function renderSummary() {
+      summary.replaceChildren();
+      for (const bucket of buckets) {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        const label = document.createElement('span');
+        appendText(label, bucket.title);
+        const count = document.createElement('strong');
+        appendText(count, countFor(bucket.id));
+        card.append(label, count);
+        summary.appendChild(card);
+      }
+    }
+
+    function renderNav() {
+      bucketNav.replaceChildren();
+      const all = document.createElement('button');
+      all.type = 'button';
+      all.className = 'is-active';
+      all.dataset.bucket = 'all';
+      appendText(all, 'All tickets');
+      bucketNav.appendChild(all);
+      for (const bucket of buckets) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.bucket = bucket.id;
+        appendText(button, `${bucket.title} (${countFor(bucket.id)})`);
+        bucketNav.appendChild(button);
+      }
+    }
+
+    function ticketSearchText(ticket) {
+      return [
+        ticket.key,
+        ticket.summary,
+        ticket.status,
+        ticket.assignee,
+        ticket.priority,
+        ticket.reason,
+        ticket.note,
+        ...(ticket.labels || [])
+      ].map(text).join(' ').toLowerCase();
+    }
+
+    function shouldShow(ticket) {
+      const query = filterInput.value.trim().toLowerCase();
+      if (activeBucket !== 'all' && ticket.bucket !== activeBucket) return false;
+      if (activeView === 'focus' && ticket.bucket !== 'focus') return false;
+      if (activeView === 'ignored' && ticket.bucket !== 'ignored') return false;
+      if (query && !ticketSearchText(ticket).includes(query)) return false;
+      return true;
+    }
+
+    function renderTicket(ticket) {
+      const card = document.createElement('article');
+      card.className = 'ticket';
+      card.hidden = !shouldShow(ticket);
+
+      const head = document.createElement('div');
+      head.className = 'ticket-head';
+      const key = document.createElement('strong');
+      appendText(key, ticket.key || 'UNKNOWN');
+      const priority = document.createElement('span');
+      appendText(priority, ticket.priority || 'None');
+      head.append(key, priority);
+
+      const title = document.createElement('h3');
+      appendText(title, ticket.summary || 'Untitled ticket');
+
+      const details = document.createElement('dl');
+      for (const [label, value] of [
+        ['Status', ticket.status || 'Unknown'],
+        ['Assignee', ticket.assignee || 'Unassigned'],
+        ['Due', ticket.due || 'No date'],
+        ['Updated', ticket.updated || 'Unknown']
+      ]) {
+        const group = document.createElement('div');
+        const term = document.createElement('dt');
+        const desc = document.createElement('dd');
+        appendText(term, label);
+        appendText(desc, value);
+        group.append(term, desc);
+        details.appendChild(group);
+      }
+
+      const labels = document.createElement('div');
+      labels.className = 'labels';
+      for (const item of ticket.labels || []) {
+        const chip = document.createElement('span');
+        chip.className = 'label';
+        appendText(chip, item);
+        labels.appendChild(chip);
+      }
+
+      card.append(head, title, details, labels);
+
+      if (ticket.reason || ticket.review_after || ticket.note) {
+        const rule = document.createElement('div');
+        rule.className = 'local-rule';
+        appendText(rule, [ticket.reason, ticket.review_after && `review ${ticket.review_after}`, ticket.note].filter(Boolean).join(' | '));
+        card.appendChild(rule);
+      }
+
+      return card;
+    }
+
+    function renderBoard() {
+      board.replaceChildren();
+      for (const bucket of buckets) {
+        const section = document.createElement('section');
+        section.className = 'bucket';
+        section.dataset.bucket = bucket.id;
+        section.setAttribute('aria-hidden', 'false');
+
+        const title = document.createElement('button');
+        title.type = 'button';
+        title.className = 'bucket-title';
+        title.setAttribute('aria-expanded', 'true');
+        const label = document.createElement('span');
+        appendText(label, bucket.title);
+        const count = document.createElement('strong');
+        appendText(count, countFor(bucket.id));
+        title.append(label, count);
+
+        const body = document.createElement('div');
+        body.className = 'bucket-body';
+        const bucketTickets = tickets.filter((ticket) => ticket.bucket === bucket.id);
+        for (const ticket of bucketTickets) body.appendChild(renderTicket(ticket));
+        if (!bucketTickets.length) {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          appendText(empty, 'No tickets in this bucket.');
+          body.appendChild(empty);
+        }
+
+        title.addEventListener('click', () => {
+          const hidden = section.getAttribute('aria-hidden') === 'true';
+          section.setAttribute('aria-hidden', hidden ? 'false' : 'true');
+          title.setAttribute('aria-expanded', hidden ? 'true' : 'false');
+        });
+
+        section.append(title, body);
+        board.appendChild(section);
+      }
+    }
+
+    function refreshVisibility() {
+      for (const ticket of document.querySelectorAll('.ticket')) ticket.hidden = true;
+      renderBoard();
+    }
+
+    document.querySelector('#desk-title').textContent = data.title || 'Jira Ticket Desk';
+    document.querySelector('#desk-subtitle').textContent = data.subtitle || 'Read-only local view for ticket triage.';
+    document.querySelector('#generated-at').textContent = data.generated_at || 'Local data view';
+
+    filterInput.addEventListener('input', refreshVisibility);
+    bucketNav.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-bucket]');
+      if (!button) return;
+      activeBucket = button.dataset.bucket;
+      for (const item of bucketNav.querySelectorAll('button')) item.classList.toggle('is-active', item === button);
+      refreshVisibility();
+    });
+    viewTabs.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-view]');
+      if (!button) return;
+      activeView = button.dataset.view;
+      for (const item of viewTabs.querySelectorAll('button')) item.classList.toggle('is-active', item === button);
+      refreshVisibility();
+    });
+
+    renderSummary();
+    renderNav();
+    renderBoard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jira Ticket Desk"
+  short_description: "Turn Jira tickets into an offline personal desk"
+  default_prompt: "Use $jira-ticket-desk to read Jira tickets, merge local rules, and generate an offline HTML ticket desk."

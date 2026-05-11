@@ -1,1 +1,7 @@
 *.json
+__pycache__/
+*.py[cod]
+.omx/learning/observations*.jsonl
+.omx/learning/candidates/*.md
+.omx/learning/promoted/*.md
+.omx/learning/archive/*.md
