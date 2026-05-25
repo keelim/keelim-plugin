@@ -16,13 +16,14 @@ from pathlib import Path
 from typing import Any
 
 
-PROMOTION_SCOPES = {"project", "workspace", "user-global", "skill", "archive"}
+PROMOTION_SCOPES = {"project", "workspace", "user-global", "skill", "subagent", "archive"}
 
 TARGETS = {
     "project": "AGENTS.md",
     "workspace": "workspace AGENTS.md or docs/*",
     "user-global": "~/.codex/AGENTS.md",
     "skill": "skills/<name>/SKILL.md",
+    "subagent": "custom subagent definition or prompt template",
     "archive": ".omx/learning/archive/",
 }
 
@@ -101,6 +102,21 @@ def classify(candidate: Candidate) -> tuple[str, str]:
         return "archive", "candidate appears weak, duplicate, or session-specific"
     if any(marker in text for marker in ("reusable workflow", "repeatable workflow", "procedure", "skill.md", "turn this into a skill")):
         return "skill", "candidate describes a reusable procedure"
+    if any(
+        marker in text
+        for marker in (
+            "custom subagent",
+            "subagent",
+            "bounded role",
+            "limited role",
+            "specialist role",
+            "research task",
+            "review pass",
+            "triage role",
+            "investigation",
+        )
+    ):
+        return "subagent", "candidate describes a bounded role or investigation"
     if any(marker in text for marker in ("user-global", "all projects", "every project", "global policy", "~/.codex")):
         return "user-global", "candidate applies across projects"
     if any(marker in text for marker in ("workspace", "child repo", "root repo", "multi-repo", "repo boundary", "monorepo")):

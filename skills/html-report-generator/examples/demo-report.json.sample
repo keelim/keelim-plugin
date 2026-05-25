@@ -1,0 +1,42 @@
+{
+  "title": "HTML Report Demo",
+  "subtitle": "Generic block-model example",
+  "summary": "A compact example report rendered without external assets or network access.",
+  "metadata": {
+    "Owner": "keelim-plugin",
+    "Status": "Demo"
+  },
+  "metrics": [
+    { "label": "Reports", "value": "3", "note": "sample count" },
+    { "label": "External calls", "value": "0", "note": "required" }
+  ],
+  "sections": [
+    {
+      "heading": "Purpose",
+      "body": "Show the minimum reusable shape for a local HTML report."
+    }
+  ],
+  "tables": [
+    {
+      "title": "Validation Contract",
+      "columns": ["Check", "Expected"],
+      "rows": [
+        ["CDN usage", "Forbidden"],
+        ["Standalone HTML", "Required"]
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "severity": "info",
+      "title": "Demo finding",
+      "body": "Findings render as escaped text blocks."
+    }
+  ],
+  "appendix": [
+    {
+      "heading": "Notes",
+      "body": "Report-specific schemas are intentionally out of scope for the first pass."
+    }
+  ]
+}

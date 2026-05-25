@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Report Generator"
+  short_description: "Render secure offline HTML reports"
+  default_prompt: "Use $html-report-generator to render a secure offline HTML report from generic block-model JSON."

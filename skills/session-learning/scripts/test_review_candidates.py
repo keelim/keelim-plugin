@@ -43,6 +43,7 @@ class ReviewCandidatesTests(unittest.TestCase):
             write_candidate(root, "workspace.md", "Preserve child repo autonomy across this workspace.")
             write_candidate(root, "global.md", "This should apply to all projects as global policy.")
             write_candidate(root, "skill.md", "This is a reusable workflow with repeatable steps.")
+            write_candidate(root, "subagent.md", "This is a bounded role for repeated CI failure triage.")
             write_candidate(root, "archive.md", "This is a duplicate candidate and should archive.")
             payload = run_review(root)
             scopes = {Path(item["path"]).name: item["promotion_scope"] for item in payload["candidates"]}
@@ -50,6 +51,7 @@ class ReviewCandidatesTests(unittest.TestCase):
             self.assertEqual(scopes["workspace.md"], "workspace")
             self.assertEqual(scopes["global.md"], "user-global")
             self.assertEqual(scopes["skill.md"], "skill")
+            self.assertEqual(scopes["subagent.md"], "subagent")
             self.assertEqual(scopes["archive.md"], "archive")
 
     def test_honors_explicit_non_project_scope(self) -> None:

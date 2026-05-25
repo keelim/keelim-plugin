@@ -274,6 +274,7 @@ def write_stop_candidate(paths: dict[str, Path], observation: dict[str, Any]) ->
         "- `workspace`: root or multi-repo coordination rules.",
         "- `user-global`: durable personal preferences or policy that should apply across projects.",
         "- `skill`: reusable procedural workflow with a clear trigger.",
+        "- `subagent`: bounded specialist role, recurring investigation, review pass, or research task.",
         "- `archive`: weak, duplicate, stale, or session-specific.",
         "",
     ]

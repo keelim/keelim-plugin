@@ -15,9 +15,10 @@ A personal skill collection for both Codex and Claude.
 ## Current skills
 - `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files that reports quality findings before proposing targeted updates
 - `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
+- `html-report-generator`: a reusable offline HTML report foundation with generic block-model JSON, a stdlib renderer, template asset, and security validation
 - `jira-ticket-desk`: a read-only Jira triage workflow that merges local ticket rules and renders a secure offline HTML desk from a reusable template plus JSON data
 - `release-automation`: a date-based Android release workflow for updating `versionCode`, checking the release PR, and dispatching `app_deploy.yml` with `dry-run`, `confirm`, and `execute` modes
-- `session-learning`: a conservative Hermes-inspired workflow for hook-based session observations, learning candidates, promotion, and curator cleanup
+- `session-learning`: a conservative Hermes-inspired workflow for hook-based observations, ad hoc session pattern scans, skill/subagent recommendations, promotion, and curator cleanup
 - `session-usage-dashboard`: a Codex/Claude session analyzer that renders offline HTML and JSON usage dashboards for tools, skills, and subagents
 - `tech-post-maker`: a writing skill for first-person technical posts in a calm personal engineer voice, especially build logs, case studies, workflow write-ups, and series posts
 
