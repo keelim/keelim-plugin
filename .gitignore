@@ -1,6 +1,10 @@
 *.json
-__pycache__/
-*.py[cod]
+.skillopt/
+.venv/
+docs/research/
+evals/
+scripts/promote_plugin_skills.py
+scripts/skillopt_*
 .omx/learning/observations*.jsonl
 .omx/learning/candidates/*.md
 .omx/learning/promoted/*.md
@@ -11,4 +15,3 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pycache/
->>>>>>> Stashed changes

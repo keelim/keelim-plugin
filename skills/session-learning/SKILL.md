@@ -38,31 +38,31 @@ Even global hooks write observations under the active project's `.omx/learning` 
 After installing this skill into a project, preview project-scoped hook registration:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py
 ```
 
 Apply the hook registration:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply
 ```
 
 Install hooks globally for every project:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
 ```
 
 Remove only the hooks registered for this project:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --uninstall --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --uninstall --apply
 ```
 
 Remove the global hook registration:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --scope global --uninstall --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --scope global --uninstall --apply
 ```
 
 The installer updates Codex and Claude hook config files. Project-scoped registrations carry `SESSION_LEARNING_SCOPE_ROOT=<project-root>`, so events outside that project are skipped. Global registrations omit that scope root and write observations under each active project's `.omx/learning` directory.
@@ -70,8 +70,8 @@ The installer updates Codex and Claude hook config files. Project-scoped registr
 Inspect current registration without writing config:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --status
-python3 .agents/skills/session-learning/scripts/install_hooks.py --scope global --status
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --scope global --status
 ```
 
 ## Hook Capture
@@ -120,8 +120,8 @@ Triage repeated work this way:
 Preview promotion routing:
 
 ```bash
-python3 skills/session-learning/scripts/review_candidates.py --roots .
-python3 skills/session-learning/scripts/review_candidates.py --roots /path/to/project-a /path/to/project-b --since-days 30
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/review_candidates.py --roots .
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/review_candidates.py --roots /path/to/project-a /path/to/project-b --since-days 30
 ```
 
 The review script prints recommendations only. It must not edit canonical project files.
@@ -155,8 +155,8 @@ Run a curator pass periodically:
 4. Keep canonical docs compact; prefer patching existing rules over adding nearby duplicates.
 
 ## Verification
-- Run `python3 skills/session-learning/scripts/test_learning_observer.py`.
-- Run `python3 skills/session-learning/scripts/test_install_hooks.py`.
-- Run `python3 skills/session-learning/scripts/test_review_candidates.py`.
+- Run `uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_learning_observer.py`.
+- Run `uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py`.
+- Run `uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_review_candidates.py`.
 - Run `git diff --check`.
 - Confirm new hook code does not contain machine-specific paths from unrelated projects.

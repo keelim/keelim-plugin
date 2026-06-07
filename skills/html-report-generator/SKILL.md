@@ -21,7 +21,7 @@ The generated report must be local-only. Do not use CDNs, remote fonts, remote i
 ## Quick Start
 
 ```bash
-python3 skills/html-report-generator/scripts/render_html_report.py \
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/render_html_report.py \
   --input skills/html-report-generator/examples/demo-report.json.sample \
   --output /tmp/html-report-demo.html \
   --validate
@@ -30,7 +30,7 @@ python3 skills/html-report-generator/scripts/render_html_report.py \
 Validate an existing report:
 
 ```bash
-python3 skills/html-report-generator/scripts/render_html_report.py --check-html /tmp/html-report-demo.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/render_html_report.py --check-html /tmp/html-report-demo.html
 ```
 
 ## Input Model
@@ -52,8 +52,16 @@ Remote URLs found in report text are replaced with `[remote-url-omitted]` before
 ## Verification
 
 ```bash
-python3 skills/html-report-generator/scripts/test_render_html_report.py
-env PYTHONPYCACHEPREFIX=.omx/pycache python3 -m py_compile skills/html-report-generator/scripts/render_html_report.py skills/html-report-generator/scripts/test_render_html_report.py
-python3 /Users/keelim/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/html-report-generator
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/test_render_html_report.py
+env PYTHONPYCACHEPREFIX=.omx/pycache uv --cache-dir .skillopt/uv-cache run --python 3.12 python -m py_compile skills/html-report-generator/scripts/render_html_report.py skills/html-report-generator/scripts/test_render_html_report.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --with pyyaml python /Users/keelim/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/html-report-generator
 git diff --check
 ```
+
+## Review Answer Guardrails
+
+When answering plugin skill review or promotion questions about this skill, keep the response anchored to `html-report-generator` and the concrete maintenance surface being reviewed.
+
+- For SKILL.md improvement recommendations, explicitly name `html-report-generator` and `SKILL.md`, keep the recommendation concise, and preserve the generic block-model workflow rather than narrowing it to one report domain.
+- For validation questions, name the relevant validation commands or checks from the Verification section, including renderer tests, `py_compile`, skill quick validation, and `git diff --check` when applicable.
+- For promotion or packaging questions, state that `html-report-generator` must preserve its bundled `references/`, `scripts/`, and `assets/` resources, especially `references/report-schema.md`, `scripts/render_html_report.py`, `scripts/test_render_html_report.py`, and `assets/report-template.html`.

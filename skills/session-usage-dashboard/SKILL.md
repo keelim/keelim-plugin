@@ -14,7 +14,7 @@ The generated dashboard is intentionally local-only: a single HTML file with inl
 Run the bundled renderer from the repository root:
 
 ```bash
-python3 skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py --current --cwd "$PWD" --out .omx/session-usage/current
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py --current --cwd "$PWD" --out .omx/session-usage/current
 ```
 
 Then open the generated dashboard locally:
@@ -26,7 +26,7 @@ open .omx/session-usage/current/dashboard.html
 For explicit files:
 
 ```bash
-python3 skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py \
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py \
   --codex-session /path/to/codex-session.jsonl \
   --claude-session /path/to/claude-session.jsonl \
   --out .omx/session-usage/manual
@@ -76,8 +76,15 @@ Use `references/lazyweb-dashboard-notes.md` for dashboard layout guidance. Lazyw
 Run:
 
 ```bash
-python3 skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py
-env PYTHONPYCACHEPREFIX=.omx/pycache python3 -m py_compile skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py
-python3 /Users/keelim/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/session-usage-dashboard
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py
+env PYTHONPYCACHEPREFIX=.omx/pycache uv --cache-dir .skillopt/uv-cache run --python 3.12 python -m py_compile skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --with pyyaml python /Users/keelim/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/session-usage-dashboard
 git diff --check
 ```
+
+## Plugin Review Response Notes
+For review-only or plugin skill improvement prompts, do not run the renderer or modify files unless explicitly requested. Answer with a concise recommendation grounded in the `session-usage-dashboard` skill name, frontmatter trigger description, security contract, bundled `references` and `scripts`, and existing verification commands.
+
+When this skill is reviewed or promoted, name `session-usage-dashboard` explicitly in the response so the recommendation is anchored to the skill under review. Mirror task-critical terms from the prompt, such as `concise`, `resources`, `references`, `scripts`, or `promotion`, when they are relevant.
+
+Keep review answers concise: lead with the concrete recommendation, then include only the minimal maintenance rationale needed to preserve the offline renderer, security contract, and bundled support files.

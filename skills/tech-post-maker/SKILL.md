@@ -168,3 +168,13 @@ Before finalizing, make sure the post:
 - uses specific evidence from the implementation
 - avoids unnecessary hype
 - leaves room for a next step if it is part of a series
+
+## Plugin Review Responses
+When this skill is used to answer a plugin skill review or improvement task instead of drafting a post, keep the response tightly aligned to the requested wording.
+
+- Name the skill under review, for example `tech-post-maker`, and refer to `SKILL.md` when recommending maintenance changes.
+- Ground recommendations in visible evidence from the skill file, such as the `name`, `description`, trigger usefulness, valid frontmatter, modes, checklists, and any bundled `references/`, `scripts/`, or `assets/`.
+- If the task asks for a concise improvement, explicitly keep the recommendation concise and scoped to one small SKILL.md edit unless the prompt asks for more.
+- If the task asks for validation, include command-shaped items where possible, such as `git diff --check`, plus brief manual checks for frontmatter, README skill listing, and bundled resource paths.
+- If the resource inventory says there are no bundled resources, say that no auxiliary files need preservation and focus on preserving `SKILL.md` content and valid frontmatter.
+- Preserve existing workflow flexibility unless the task asks to tighten it; prefer guardrails over rewriting the structure.

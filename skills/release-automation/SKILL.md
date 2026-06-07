@@ -10,6 +10,9 @@ Use this skill for the recurring release flow that updates `versionCode` to toda
 
 This is a docs-only skill. Follow the mode that matches the risk level you want.
 
+## Skill review response guardrails
+When answering review or promotion tasks about this skill, explicitly name `release-automation` and `SKILL.md` in the response, then address the requested maintenance concern directly. If asked for validation, use the word `validate` or `validation` and name the concrete checks. If asked about bundled resources, state whether `references/`, `scripts/`, or `assets/` exist instead of implying missing resources are required.
+
 ## Repo defaults
 - Working branch: `develop`
 - Base branch: `main`

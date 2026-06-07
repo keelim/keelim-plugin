@@ -26,7 +26,7 @@ Use this evidence to distinguish declared `.gitmodules` entries, active gitlinks
 3. Run the generator from this skill:
 
 ```bash
-python3 /path/to/codebase-codemap/scripts/generate_codemap.py /path/to/repo
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python /path/to/codebase-codemap/scripts/generate_codemap.py /path/to/repo
 ```
 
 By default this writes `docs/CODEMAPS/<project-name>.md` inside the target repo.
@@ -39,11 +39,11 @@ By default this writes `docs/CODEMAPS/<project-name>.md` inside the target repo.
 Use the bundled script when a fast first-pass map is enough:
 
 ```bash
-python3 scripts/generate_codemap.py .
-python3 scripts/generate_codemap.py ../rich --output-dir docs/CODEMAPS
-python3 scripts/generate_codemap.py . --project-name rich-admin
-python3 scripts/generate_codemap.py . --max-files 1200 --max-symbol-files 160
-python3 scripts/generate_codemap.py . --stdout
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/generate_codemap.py .
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/generate_codemap.py ../rich --output-dir docs/CODEMAPS
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/generate_codemap.py . --project-name rich-admin
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/generate_codemap.py . --max-files 1200 --max-symbol-files 160
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/generate_codemap.py . --stdout
 ```
 
 In a multi-project workspace, run the script once per child repository. Each run should target the child repo root so the default output lands in that repo as `docs/CODEMAPS/<child-project-name>.md`.
@@ -79,6 +79,9 @@ Include these sections when editing manually:
 - `Open Questions`
 
 Read `references/codemap-schema.md` before changing the output contract or when manually creating a codemap without the script.
+
+## Skill Review Responses
+When using `codebase-codemap` to answer plugin skill review, promotion, or maintenance prompts, keep the response concise but include the literal skill name and the requested maintenance concern. If the prompt asks for validation, explicitly name the validate command or check, such as `git diff --check`, frontmatter parsing for `skills/codebase-codemap/SKILL.md`, and a smoke run of `uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/generate_codemap.py <repo> --stdout`. If the prompt asks about bundled resources, state that `references/codemap-schema.md` and `scripts/generate_codemap.py` must be preserved with the `codebase-codemap` skill.
 
 ## Good Use
 Good request:

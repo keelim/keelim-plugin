@@ -13,6 +13,10 @@ Audit, evaluate, and improve repository instruction files so Codex, Claude Code,
 
 ## Workflow
 
+### Plugin Skill Review Mode
+
+When the task is to review or promote this skill rather than audit a target repository, answer the specific maintenance question directly. Name `agent-instructions-improver`, `SKILL.md`, relevant validation commands/checks, and any bundled `references/`, `scripts/`, or `assets/` that must be carried forward during promotion.
+
 ### Phase 1: Discovery
 
 Find shared and platform-specific agent instruction files in the repository:

@@ -10,6 +10,11 @@ Use this skill to turn Jira tickets into a local operating desk. The workflow is
 
 The final HTML must work in a secure offline environment. Lazyweb is only a design-reference source before template changes; never leave Lazyweb, Jira, CDN, font, image, or script URLs in the generated HTML.
 
+## Review Task Responses
+When the user asks to review or improve this skill without modifying files, answer in the requested format and include the literal skill name `jira-ticket-desk` plus the relevant artifact term, such as `SKILL.md`, `validation command`, or `bundled resources`.
+
+For concise improvement recommendations, name the specific `SKILL.md` section to change and keep the recommendation source-flexible rather than requiring only live Atlassian MCP. For validation requests, include concrete commands or checks, especially `git diff --check`, the renderer pytest file, a demo render, and `--check-html`. For promotion-resource requests, explicitly preserve `references/`, `scripts/`, and `assets/`, including the renderer, tests, rules reference, and template.
+
 ## Workflow
 1. Confirm whether an Atlassian MCP server is available in the current session.
    - If available, query only the tickets needed for the user's desk.
@@ -46,8 +51,8 @@ Supported buckets are `focus`, `next`, `waiting`, `blocked`, `monitoring`, and `
 The normal repeated-use path is template plus data JSON:
 
 ```bash
-python3 scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
-python3 scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
 ```
 
 The first command can be run only when Jira data changes. The second command can be rerun whenever the user edits `ticket-desk.data.json` locally.
@@ -55,15 +60,15 @@ The first command can be run only when Jira data changes. The second command can
 For a one-shot render:
 
 ```bash
-python3 scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --output ticket-desk.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --output ticket-desk.html
 ```
 
 For a quick smoke test:
 
 ```bash
-python3 scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json
-python3 scripts/render_ticket_desk.py --data /tmp/jira-ticket-desk.data.json --output /tmp/jira-ticket-desk-demo.html
-python3 scripts/render_ticket_desk.py --check-html /tmp/jira-ticket-desk-demo.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --data /tmp/jira-ticket-desk.data.json --output /tmp/jira-ticket-desk-demo.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --check-html /tmp/jira-ticket-desk-demo.html
 open /tmp/jira-ticket-desk-demo.html
 ```
 

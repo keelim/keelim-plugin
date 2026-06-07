@@ -22,6 +22,74 @@ A personal skill collection for both Codex and Claude.
 - `session-usage-dashboard`: a Codex/Claude session analyzer that renders offline HTML and JSON usage dashboards for tools, skills, and subagents
 - `tech-post-maker`: a writing skill for first-person technical posts in a calm personal engineer voice, especially build logs, case studies, workflow write-ups, and series posts
 
+## Promote skills
+
+Use `scripts/promote_plugin_skills.py` to route every plugin skill through the
+same reviewable promotion path. The script never calls a model; it compares
+candidate `SKILL.md` files or SkillOpt `best_skill.md` artifacts against the
+current `skills/<name>/SKILL.md`, preserves frontmatter when needed, and applies
+only when `--apply` is passed.
+
+All local Python entrypoints in this repo should be run through `uv`:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python <script> ...
+```
+
+List the skills in scope:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py inventory
+```
+
+Compare all available candidates without modifying production skills:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote
+```
+
+For an end-to-end no-op smoke pass across every skill, stage the current skill
+files into ignored candidate storage and require one candidate per skill:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py stage-current --run-id all-skills-smoke
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+  --candidate-root .skillopt/promote-candidates/all-skills-smoke \
+  --require-candidates
+```
+
+Promote one reviewed candidate after inspecting the diff:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+  --skill tech-post-maker \
+  --candidate /path/to/reviewed/SKILL.md
+
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+  --skill tech-post-maker \
+  --candidate /path/to/reviewed/SKILL.md \
+  --apply
+```
+
+SkillOpt-generated candidates are picked up automatically from
+`.skillopt/outputs/<skill>/**/best_skill.md`. Keep `.skillopt/` ignored; it may
+contain model traces, split data, reports, and smoke candidates.
+
+## Codex-only SkillOpt
+
+Use `scripts/skillopt_plugin_skills.py` for the 8-skill Codex-only tiny pilot.
+It curates per-skill redacted splits, runs SkillOpt with a local `codex_chat`
+optimizer overlay plus upstream `codex_exec` target evaluation, and applies only
+the candidates that pass deterministic promotion gates.
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py prepare --check
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py curate --skill all --dry-run
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py run-all --dry-run
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py run-all --apply-passing --num-epochs 1 --batch-size 4 --workers 1 --max-steps 1
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py inspect-all --fail-on-tracebacks
+```
+
 ## Install with the Vercel skills CLI
 
 List the skills available from this repository:
@@ -48,14 +116,14 @@ This installs the skill into:
 For `session-learning`, preview and apply project-scoped hook registration after installing the skill:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py
-python3 .agents/skills/session-learning/scripts/install_hooks.py --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply
 ```
 
 To install `session-learning` hooks globally for every project:
 
 ```bash
-python3 .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
 ```
 
 If you prefer the full GitHub URL form, this also works:
