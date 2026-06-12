@@ -3,8 +3,15 @@
 .venv/
 docs/research/
 evals/
+!evals/
+evals/*
+!evals/skillopt/
+!evals/skillopt/**
 scripts/promote_plugin_skills.py
 scripts/skillopt_*
+!scripts/promote_plugin_skills.py
+!scripts/skillopt_agent_instructions.py
+!scripts/skillopt_plugin_skills.py
 .omx/learning/observations*.jsonl
 .omx/learning/candidates/*.md
 .omx/learning/promoted/*.md

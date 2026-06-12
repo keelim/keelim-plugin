@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import contextlib
 import io
+import json
 import tempfile
 from pathlib import Path
 
@@ -21,7 +22,9 @@ def test_demo_report_renders_and_validates() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "demo.html"
         demo = SCRIPT_PATH.parents[1] / "examples" / "demo-report.json.sample"
-        assert render_html_report.main(["--input", str(demo), "--output", str(output), "--validate"]) == 0
+        assert render_html_report.main(
+            ["--input", str(demo), "--output", str(output), "--validate", "--allow-outside-output"]
+        ) == 0
         assert output.exists()
         assert render_html_report.check_html(output) == []
 
@@ -70,11 +73,49 @@ def test_cli_check_html_fails_for_unsafe_file() -> None:
         with contextlib.redirect_stderr(io.StringIO()):
             assert render_html_report.main(["--check-html", str(unsafe)]) == 1
 
+
+def test_validate_failure_does_not_write_output() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        payload = root / "report.json"
+        template = root / "template.html"
+        output = root / "unsafe.html"
+        payload.write_text(json.dumps({"title": "Unsafe"}), encoding="utf-8")
+        template.write_text(
+            "<!doctype html><meta http-equiv=\"Content-Security-Policy\" content=\"connect-src 'none'\">"
+            "<script src=\"app.js\"></script>__REPORT_BODY__",
+            encoding="utf-8",
+        )
+        with contextlib.redirect_stderr(io.StringIO()):
+            code = render_html_report.main(
+                ["--input", str(payload), "--output", str(output), "--validate", "--template", str(template)]
+            )
+        assert code == 1
+        assert not output.exists()
+
+
+def test_output_outside_input_dir_requires_explicit_flag() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        input_dir = root / "input"
+        output_dir = root / "output"
+        input_dir.mkdir()
+        output_dir.mkdir()
+        payload = input_dir / "report.json"
+        output = output_dir / "report.html"
+        payload.write_text(json.dumps({"title": "Safe"}), encoding="utf-8")
+        with contextlib.redirect_stderr(io.StringIO()):
+            code = render_html_report.main(["--input", str(payload), "--output", str(output)])
+        assert code == 1
+        assert not output.exists()
+
 def main() -> int:
     test_demo_report_renders_and_validates()
     test_rendering_escapes_text_and_omits_remote_urls()
     test_validator_rejects_remote_assets_and_network_apis()
     test_cli_check_html_fails_for_unsafe_file()
+    test_validate_failure_does_not_write_output()
+    test_output_outside_input_dir_requires_explicit_flag()
     print("render_html_report smoke tests passed")
     return 0
 

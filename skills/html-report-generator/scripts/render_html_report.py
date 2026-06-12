@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 from html import escape
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -160,6 +162,28 @@ def load_json(path: Path) -> Mapping[str, Any]:
     if not isinstance(payload, Mapping):
         raise ValueError("report JSON must be an object")
     return payload
+
+
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def resolve_output_path(raw_output: Path, allowed_root: Path, *, allow_outside_output: bool) -> Path:
+    output = raw_output.expanduser()
+    root = allowed_root.expanduser().resolve()
+    resolved = output.resolve() if output.is_absolute() else (root / output).resolve()
+    if resolved.exists() and resolved.is_symlink():
+        raise ValueError(f"output path symlink is not allowed: {resolved}")
+    if not allow_outside_output and not is_within(resolved, root):
+        raise ValueError(
+            f"output path must stay under {root}; "
+            "pass --allow-outside-output only for a reviewed local path"
+        )
+    return resolved
 
 
 def clean_text(value: Any) -> str:
@@ -346,7 +370,10 @@ def check_html(path: Path) -> list[str]:
 
 def write_html(path: Path, html: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(html, encoding="utf-8")
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+        handle.write(html)
+        tmp_name = handle.name
+    os.replace(tmp_name, path)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -358,7 +385,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         help="Validate an existing HTML file without rendering",
     )
+    parser.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE_PATH, help="HTML template path")
     parser.add_argument("--validate", action="store_true", help="Validate output HTML after rendering")
+    parser.add_argument(
+        "--allow-outside-output",
+        action="store_true",
+        help="allow --output outside the input JSON directory after local review",
+    )
     args = parser.parse_args(argv)
 
     if args.check_html:
@@ -373,15 +406,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--input and --output are required unless --check-html is used")
 
     report = load_json(args.input)
-    html = render_html(report)
-    write_html(args.output, html)
-
+    html = render_html(report, args.template)
     if args.validate:
-        issues = check_html(args.output)
+        issues = check_html_text(html)
         if issues:
             for issue in issues:
                 print(issue, file=sys.stderr)
             return 1
+    try:
+        output = resolve_output_path(args.output, args.input.parent, allow_outside_output=args.allow_outside_output)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    write_html(output, html)
     return 0
 
 

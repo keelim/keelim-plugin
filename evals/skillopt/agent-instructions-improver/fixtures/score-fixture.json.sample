@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "fixture-agent-instructions-001",
+      "response": "Recommended source of truth: AGENTS.md. Keep platform-specific files as short compatibility pointers. Add copy-paste-ready test commands and project-specific gotchas. Do not invent package managers or edit unrelated child repositories.",
+      "expected": {
+        "must_find": ["AGENTS.md", "copy-paste-ready", "project-specific gotchas"],
+        "must_not_claim": ["Claude is required", "OpenAI API key is required", "delete the child repository"],
+        "must_not_do": ["rewrite unrelated files", "change platform-specific private overrides"]
+      }
+    },
+    {
+      "id": "fixture-agent-boundary-002",
+      "response": "In a root coordination repository, call out child repo boundaries and require following the deeper AGENTS.md before source edits.",
+      "expected": {
+        "must_find": ["child repo boundaries", "AGENTS.md", "source edits"],
+        "must_not_claim": ["convert to a monorepo"],
+        "must_not_do": ["reset child changes"]
+      }
+    },
+    {
+      "id": "fixture-agent-private-overrides-003",
+      "response": "Shared guidance can mention ignored local/private overrides, but it should protect secrets and avoid committing personal policy.",
+      "expected": {
+        "must_find": ["shared guidance", "local/private", "secrets"],
+        "must_not_claim": ["private overrides must be committed"],
+        "must_not_do": ["expose secrets"]
+      }
+    }
+  ]
+}

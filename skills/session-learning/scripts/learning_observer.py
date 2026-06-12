@@ -8,6 +8,7 @@ This script is intentionally conservative: it records observations under
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -25,6 +26,12 @@ SECRET_RE = re.compile(
     r"([A-Za-z]+\s+)?"
     r"([-A-Za-z0-9_/.+=]{8,})"
 )
+SECRET_KEY_RE = re.compile(r"(?i)(api[_-]?key|token|secret|password|authorization|credentials?|auth)")
+SECRET_VALUE_RE = re.compile(
+    r"(?i)\b(?:bearer|basic)\s+[-A-Za-z0-9_/.+=]{8,}\b|"
+    r"\b(?:sk|ghp|gho|github_pat|xox[baprs])-[-A-Za-z0-9_/.+=]{8,}\b|"
+    r"\b[A-Za-z0-9_/.+=-]{32,}\b"
+)
 
 SKIP_PATH_PARTS = ("observer-sessions", ".claude-mem", ".omx/learning")
 PREVIEW_LIMIT = 2000
@@ -35,16 +42,31 @@ def utc_now() -> str:
 
 
 def slug_timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+
+
+def redact_value(value: Any, key_hint: str = "") -> Any:
+    if value is None:
+        return None
+    if SECRET_KEY_RE.search(key_hint):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(key): redact_value(item, str(key)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_value(item, key_hint) for item in value]
+    if isinstance(value, str):
+        return SECRET_VALUE_RE.sub("[REDACTED]", value)
+    return value
 
 
 def scrub(value: Any) -> str | None:
     if value is None:
         return None
-    if isinstance(value, (dict, list)):
-        text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    redacted = redact_value(value)
+    if isinstance(redacted, (dict, list)):
+        text = json.dumps(redacted, ensure_ascii=False, sort_keys=True)
     else:
-        text = str(value)
+        text = str(redacted)
     text = SECRET_RE.sub(lambda match: f"{match.group(1)}{match.group(2)}{match.group(3) or ''}[REDACTED]", text)
     return text[:PREVIEW_LIMIT]
 
@@ -68,7 +90,7 @@ def first_present(payload: dict[str, Any], keys: tuple[str, ...]) -> Any:
     return None
 
 
-def run_git(args: list[str], cwd: Path) -> str:
+def run_git_checked(args: list[str], cwd: Path) -> tuple[str, str | None]:
     try:
         result = subprocess.run(
             ["git", *args],
@@ -78,30 +100,52 @@ def run_git(args: list[str], cwd: Path) -> str:
             timeout=3,
             check=False,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return ""
+    except FileNotFoundError:
+        return "", "git_not_found"
+    except subprocess.TimeoutExpired:
+        return "", "git_timeout"
     if result.returncode != 0:
-        return ""
-    return result.stdout.strip()
+        stderr = result.stderr.strip().splitlines()
+        detail = stderr[0] if stderr else f"exit_{result.returncode}"
+        return "", f"git_failed:{detail}"
+    return result.stdout.strip(), None
 
 
-def root_from_cwd(cwd_text: str | None) -> Path:
+def run_git(args: list[str], cwd: Path) -> str:
+    output, _ = run_git_checked(args, cwd)
+    return output
+
+
+def root_from_cwd(cwd_text: str | None) -> tuple[Path, str, str | None]:
     cwd = Path(cwd_text or os.getcwd()).expanduser()
     if not cwd.exists():
         cwd = Path(os.getcwd())
     cwd = cwd.resolve()
 
-    git_root = run_git(["rev-parse", "--show-toplevel"], cwd)
+    git_root, warning = run_git_checked(["rev-parse", "--show-toplevel"], cwd)
     if git_root:
-        return Path(git_root).resolve()
-    return cwd
+        return Path(git_root).resolve(), "git", None
+    return cwd, "cwd-fallback", warning
 
 
-def detect_project_root(cwd_text: str | None) -> Path:
+def detect_project_root(cwd_text: str | None) -> tuple[Path, str, str | None]:
     env_root = os.environ.get("SESSION_LEARNING_PROJECT_DIR")
-    if env_root and Path(env_root).is_dir():
-        return Path(env_root).resolve()
-    return root_from_cwd(cwd_text)
+    event_root, event_source, event_warning = root_from_cwd(cwd_text)
+    if env_root:
+        candidate = Path(env_root).expanduser()
+        if not candidate.is_dir():
+            return event_root, event_source, "env_project_dir_not_directory"
+        resolved = candidate.resolve()
+        if not cwd_text:
+            return resolved, "env", None
+        scope = scope_root()
+        allowed = path_contains(event_root, resolved) or path_contains(resolved, event_root)
+        if scope is not None:
+            allowed = allowed and path_contains(resolved, scope)
+        if not allowed:
+            return event_root, event_source, f"env_project_dir_rejected:{resolved}"
+        return resolved, "env", None
+    return event_root, event_source, event_warning
 
 
 def project_id(root: Path) -> str:
@@ -166,7 +210,14 @@ def learning_dirs(root: Path) -> dict[str, Path]:
     return paths
 
 
-def build_observation(phase: str, payload: dict[str, Any], raw_error: str | None, root: Path) -> dict[str, Any]:
+def build_observation(
+    phase: str,
+    payload: dict[str, Any],
+    raw_error: str | None,
+    root: Path,
+    root_source: str,
+    root_warning: str | None,
+) -> dict[str, Any]:
     cwd_text = first_present(payload, ("cwd", "working_directory", "workdir"))
     tool_input = first_present(payload, ("tool_input", "input", "arguments", "params", "prompt", "user_prompt"))
     tool_output = first_present(payload, ("tool_response", "tool_output", "output", "result", "error"))
@@ -178,10 +229,13 @@ def build_observation(phase: str, payload: dict[str, Any], raw_error: str | None
         "tool_use_id": str(first_present(payload, ("tool_use_id", "call_id")) or ""),
         "cwd": str(cwd_text or ""),
         "project_root": str(root),
+        "root_source": root_source,
         "project_id": project_id(root),
         "tool": str(first_present(payload, ("tool_name", "tool", "name")) or "unknown"),
         "redacted": True,
     }
+    if root_warning:
+        observation["root_warning"] = scrub(root_warning)
     if raw_error:
         observation["outcome_signal"] = "parse_error"
         observation["output_preview"] = scrub(raw_error)
@@ -210,9 +264,15 @@ def infer_outcome(phase: str, observation: dict[str, Any]) -> str:
 
 
 def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+    line = json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n"
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True))
-        handle.write("\n")
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.write(line)
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def recent_session_observations(path: Path, session_id: str, limit: int = 200) -> list[dict[str, Any]]:
@@ -233,7 +293,7 @@ def recent_session_observations(path: Path, session_id: str, limit: int = 200) -
 def write_stop_candidate(paths: dict[str, Path], observation: dict[str, Any]) -> Path:
     session_id = observation.get("session_id", "unknown")
     safe_session = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(session_id))[:48] or "unknown"
-    candidate_path = paths["candidates"] / f"{slug_timestamp()}-{safe_session}.md"
+    candidate_path = unique_candidate_path(paths["candidates"], safe_session)
     recent = recent_session_observations(paths["observations"], str(session_id))
     signals: dict[str, int] = {}
     for item in recent:
@@ -282,6 +342,15 @@ def write_stop_candidate(paths: dict[str, Path], observation: dict[str, Any]) ->
     return candidate_path
 
 
+def unique_candidate_path(directory: Path, safe_session: str) -> Path:
+    for index in range(100):
+        suffix = f"-{index}" if index else ""
+        path = directory / f"{slug_timestamp()}-{safe_session}{suffix}.md"
+        if not path.exists():
+            return path
+    raise RuntimeError("could not allocate unique stop candidate path")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", default="post")
@@ -291,8 +360,8 @@ def main() -> int:
     raw = sys.stdin.read()
     payload, raw_error = load_payload(raw)
     cwd_text = first_present(payload, ("cwd", "working_directory", "workdir"))
-    event_root = root_from_cwd(str(cwd_text) if cwd_text else None)
-    root = detect_project_root(str(cwd_text) if cwd_text else None)
+    event_root, _, _ = root_from_cwd(str(cwd_text) if cwd_text else None)
+    root, root_source, root_warning = detect_project_root(str(cwd_text) if cwd_text else None)
     scope = scope_root()
     if scope is not None:
         root = scope
@@ -300,7 +369,7 @@ def main() -> int:
         return 0
 
     paths = learning_dirs(root)
-    observation = build_observation(args.phase, payload, raw_error, root)
+    observation = build_observation(args.phase, payload, raw_error, root, root_source, root_warning)
     if args.dry_run:
         print(json.dumps(observation, ensure_ascii=False, sort_keys=True))
         return 0

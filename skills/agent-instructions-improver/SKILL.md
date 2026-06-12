@@ -1,6 +1,6 @@
 ---
 name: agent-instructions-improver
-description: Audit and improve AGENTS.md and related agent instruction files across repositories. Use when the user asks to check, audit, update, improve, migrate, or consolidate AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, or project operating guides for shared AI-agent context. Reports quality findings before proposing targeted updates.
+description: Audit and improve AGENTS.md and related agent instruction files across repositories. Use when the user asks to check, audit, update, improve, migrate, consolidate, or distill session learnings into AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, or project operating guides for shared AI-agent context. Reports quality findings before proposing targeted updates.
 ---
 
 # Agent Instructions Improver
@@ -8,6 +8,8 @@ description: Audit and improve AGENTS.md and related agent instruction files acr
 Audit, evaluate, and improve repository instruction files so Codex, Claude Code, Gemini, Copilot, Cursor, and other agent platforms can share clear project context.
 
 **Default source of truth:** prefer repo-local `AGENTS.md` for shared project instructions. Keep platform-specific files only for platform-only behavior, compatibility pointers, or local/private overrides.
+
+**Session-to-AGENTS.md rule:** only promote durable, reusable project knowledge from a session. Do not add raw transcripts, one-off task status, secrets, private local state, or facts that belong in code, tests, docs, or commit messages.
 
 **This skill can write to agent instruction files.** After presenting a quality report and getting user approval, it updates files with targeted improvements.
 
@@ -17,6 +19,16 @@ Audit, evaluate, and improve repository instruction files so Codex, Claude Code,
 
 When the task is to review or promote this skill rather than audit a target repository, answer the specific maintenance question directly. Name `agent-instructions-improver`, `SKILL.md`, relevant validation commands/checks, and any bundled `references/`, `scripts/`, or `assets/` that must be carried forward during promotion.
 
+### Session Learning Capture Mode
+
+When the user asks to convert a session, transcript, handoff, review, or recent debugging run into `AGENTS.md` / agentmd updates, use this workflow before editing:
+
+1. **Extract candidate learnings** - Look for reusable commands, verification paths, repo boundaries, ownership rules, tool constraints, recurring gotchas, and external-state caveats.
+2. **Reject non-durable material** - Exclude one-off progress notes, raw session logs, secrets, personal data, temporary blockers without a reusable rule, and implementation details already captured in code or tests.
+3. **Route each learning** - Put shared project behavior in `AGENTS.md`; keep platform-only behavior in `CLAUDE.md`, `GEMINI.md`, Copilot, or Cursor files; route local/private preferences to ignored local files or user-level memory instead.
+4. **Report before patching** - Show accepted learnings, rejected learnings, target file(s), and a concise proposed diff. If no durable learning survives, say no update is recommended.
+5. **Apply narrowly** - Preserve the target file's structure, add the smallest useful text, and verify with `git diff --check` scoped to the touched instruction files when possible.
+
 ### Phase 1: Discovery
 
 Find shared and platform-specific agent instruction files in the repository:
@@ -24,6 +36,7 @@ Find shared and platform-specific agent instruction files in the repository:
 ```bash
 find . \( \
   -name "AGENTS.md" -o \
+  -name "AGENT.md" -o \
   -name "CLAUDE.md" -o \
   -name ".claude.md" -o \
   -name ".claude.local.md" -o \
@@ -38,6 +51,7 @@ find . \( \
 | Type | Location | Purpose |
 |------|----------|---------|
 | Shared root guide | `./AGENTS.md` | Primary project context, checked into git and shared across agent platforms |
+| Legacy/shared alias | `./AGENT.md` | Treat as a possible older/shared guide; prefer consolidating to `AGENTS.md` when safe |
 | Platform compatibility | `./CLAUDE.md`, `./GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/*` | Platform-specific entry points or small pointers to the shared guide |
 | Local overrides | `./.claude.local.md`, ignored local files | Personal/local settings that should not be shared |
 | Package-specific | `./packages/*/AGENTS.md` or nested `AGENTS.md` | Module-level context in monorepos |
@@ -60,6 +74,7 @@ For each instruction file, evaluate against quality criteria. See [references/qu
 | Currency | High | Does it reflect current codebase state? |
 | Actionability | High | Are instructions executable, not vague? |
 | Cross-platform fit | Medium | Is shared guidance in `AGENTS.md` and platform-specific guidance isolated? |
+| Session durability | Medium | If sourced from a session, is the learning reusable beyond the current task? |
 
 **Quality Scores:**
 - **A (90-100)**: Comprehensive, current, actionable
@@ -90,8 +105,8 @@ Format:
 
 | Criterion | Score | Notes |
 |-----------|-------|-------|
-| Commands/workflows | X/20 | ... |
-| Architecture clarity | X/20 | ... |
+| Commands/workflows | X/15 | ... |
+| Architecture clarity | X/15 | ... |
 | Non-obvious patterns | X/15 | ... |
 | Conciseness | X/15 | ... |
 | Currency | X/15 | ... |
@@ -120,12 +135,14 @@ After outputting the quality report, ask user for confirmation before updating.
    - Package relationships that weren't clear
    - Testing approaches that work
    - Configuration quirks
+   - Session learnings that are likely to recur in future agent work
 
 2. **Keep it minimal** - Avoid:
    - Restating what's obvious from the code
    - Generic best practices already covered
    - One-off fixes unlikely to recur
    - Verbose explanations when a one-liner suffices
+   - Status updates, raw transcripts, or task-specific breadcrumbs
 
 3. **Show diffs** - For each change, show:
    - Which instruction file to update
@@ -165,12 +182,14 @@ See [references/templates.md](references/templates.md) for `AGENTS.md` templates
 4. **Missing environment setup**: Required env vars or config
 5. **Broken test commands**: Test scripts that have changed
 6. **Undocumented gotchas**: Non-obvious patterns not captured
+7. **Session residue**: One-off status or transcript details added as if they were durable project rules
 
 ## User Tips to Share
 
 When presenting recommendations, remind users:
 
 - **Prefer `AGENTS.md` for shared rules**: Put durable project behavior where multiple agents can read it.
+- **Session learnings need a filter**: Capture reusable rules, not a diary of what happened.
 - **Keep it concise**: Agent instruction files should be human-readable; dense is better than verbose
 - **Actionable commands**: All documented commands should be copy-paste ready
 - **Use local overrides sparingly**: Personal preferences belong in ignored local files or user-level settings, not shared project guides

@@ -278,6 +278,36 @@ Copilot-specific notes:
 
 ---
 
+## Template: Session-to-AGENTS.md Report
+
+Use this when turning session learnings into instruction-file updates.
+
+````markdown
+## Session-to-AGENTS.md Report
+
+### Durable Candidates
+
+| Learning | Target | Why it belongs |
+|----------|--------|----------------|
+| <reusable rule or gotcha> | `AGENTS.md` | <future-session value> |
+
+### Rejected
+
+| Item | Reason |
+|------|--------|
+| <status note or raw detail> | <why it should not enter instructions> |
+
+### Proposed Diff
+
+```diff
++ <smallest useful instruction-file addition>
+```
+````
+
+If every candidate is rejected, report that no instruction update is recommended.
+
+---
+
 ## Update Principles
 
 When updating any agent instruction file:
@@ -285,5 +315,6 @@ When updating any agent instruction file:
 1. **Be specific**: Use actual file paths, real commands from this project
 2. **Be current**: Verify info against the actual codebase
 3. **Centralize shared rules**: Put durable project defaults in `AGENTS.md`
-4. **Be brief**: One line per concept when possible
-5. **Be useful**: Would this help a new agent session understand the project?
+4. **Filter session input**: Keep reusable operating knowledge, reject status or transcript residue
+5. **Be brief**: One line per concept when possible
+6. **Be useful**: Would this help a new agent session understand the project?

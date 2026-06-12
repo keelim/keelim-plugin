@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import subprocess
 import sys
@@ -13,6 +14,10 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).with_name("learning_observer.py")
+SPEC = importlib.util.spec_from_file_location("learning_observer", SCRIPT)
+assert SPEC and SPEC.loader
+learning_observer = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(learning_observer)
 
 
 class LearningObserverTests(unittest.TestCase):
@@ -75,6 +80,58 @@ class LearningObserverTests(unittest.TestCase):
             self.assertIn("recommended_target: AGENTS.md", text)
             self.assertIn("source_projects:", text)
 
+    def test_dry_run_prints_observation_without_writing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = os.environ.copy()
+            env["SESSION_LEARNING_PROJECT_DIR"] = str(root)
+            payload = {"session_id": "s-dry", "cwd": str(root), "tool_name": "Bash"}
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "--phase", "post", "--dry-run"],
+                input=json.dumps(payload),
+                text=True,
+                capture_output=True,
+                env=env,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            row = json.loads(result.stdout)
+            self.assertEqual(row["session_id"], "s-dry")
+            self.assertFalse((root / ".omx" / "learning" / "observations.jsonl").exists())
+            self.assertEqual(list((root / ".omx" / "learning" / "candidates").glob("*.md")), [])
+
+    def test_appends_observations_without_overwriting_existing_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            existing = {"session_id": "existing", "outcome_signal": "observed"}
+            observation_path = root / ".omx" / "learning" / "observations.jsonl"
+            observation_path.parent.mkdir(parents=True, exist_ok=True)
+            observation_path.write_text(json.dumps(existing) + "\n", encoding="utf-8")
+
+            payload = {"session_id": "new", "cwd": str(root), "tool_name": "Bash"}
+            result = self.run_observer(root, json.dumps(payload))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            rows = [json.loads(line) for line in observation_path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([row["session_id"] for row in rows], ["existing", "new"])
+
+    def test_stop_candidate_paths_do_not_collide(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = learning_observer.learning_dirs(root)
+            first = learning_observer.unique_candidate_path(paths["candidates"], "same-session")
+            first.write_text("existing", encoding="utf-8")
+            second = learning_observer.unique_candidate_path(paths["candidates"], "same-session")
+            self.assertNotEqual(first, second)
+
+    def test_observation_includes_root_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = {"session_id": "s-root", "cwd": str(root), "tool_name": "Bash"}
+            result = self.run_observer(root, json.dumps(payload))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            row = json.loads((root / ".omx" / "learning" / "observations.jsonl").read_text())
+            self.assertEqual(row["root_source"], "env")
+
     def test_scope_root_skips_outside_project(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside:
             root = Path(tmp)
@@ -86,6 +143,18 @@ class LearningObserverTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((root / ".omx" / "learning" / "observations.jsonl").exists())
+
+    def test_env_project_dir_mismatch_falls_back_to_event_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as other:
+            event_root = Path(tmp)
+            env_root = Path(other)
+            payload = {"session_id": "s-env", "cwd": str(event_root), "tool_name": "Bash"}
+            result = self.run_observer(env_root, json.dumps(payload), extra_env={"SESSION_LEARNING_PROJECT_DIR": str(env_root)})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((env_root / ".omx" / "learning" / "observations.jsonl").exists())
+            row = json.loads((event_root / ".omx" / "learning" / "observations.jsonl").read_text())
+            self.assertEqual(row["root_source"], "cwd-fallback")
+            self.assertIn("env_project_dir_rejected", row["root_warning"])
 
 
 if __name__ == "__main__":

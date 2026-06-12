@@ -2,34 +2,34 @@
 
 ## Scoring Rubric
 
-### 1. Commands/Workflows (20 points)
+### 1. Commands/Workflows (15 points)
 
-**20 points**: All essential commands documented with context
+**15 points**: All essential commands documented with context
 - Build, test, lint, deploy commands present
 - Development workflow clear
 - Common operations documented
 
-**15 points**: Most commands present, some missing context
+**11 points**: Most commands present, some missing context
 
-**10 points**: Basic commands only, no workflow
+**8 points**: Basic commands only, no workflow
 
-**5 points**: Few commands, many missing
+**4 points**: Few commands, many missing
 
 **0 points**: No commands documented
 
-### 2. Architecture Clarity (20 points)
+### 2. Architecture Clarity (15 points)
 
-**20 points**: Clear codebase map
+**15 points**: Clear codebase map
 - Key directories explained
 - Module relationships documented
 - Entry points identified
 - Data flow described where relevant
 
-**15 points**: Good structure overview, minor gaps
+**11 points**: Good structure overview, minor gaps
 
-**10 points**: Basic directory listing only
+**8 points**: Basic directory listing only
 
-**5 points**: Vague or incomplete
+**4 points**: Vague or incomplete
 
 **0 points**: No architecture info
 
@@ -95,6 +95,20 @@
 **4 points**: Useful guidance exists, but ownership between `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Copilot, or Cursor files is unclear
 
 **0 points**: Multiple instruction files conflict or duplicate large sections
+
+## Session-to-AGENTS.md Durability Check
+
+When an update is sourced from a session, transcript, handoff, or recent debugging run, filter each candidate learning before scoring the target file:
+
+| Keep | Reject |
+|------|--------|
+| Reusable commands or validation paths | Raw transcript excerpts |
+| Repo boundaries and ownership rules | One-off task status |
+| Recurrent gotchas and workarounds | Secrets, private data, or local-only state |
+| Tool constraints future agents must know | Temporary blockers without a general rule |
+| External-state caveats that change workflow | Details already captured better in code, tests, docs, or commits |
+
+Treat session residue as a conciseness and currency problem. A good `AGENTS.md` teaches future sessions how to work; it does not archive what happened in the last one.
 
 ## Assessment Process
 

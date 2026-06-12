@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -23,15 +24,17 @@ def write_candidate(root: Path, name: str, body: str, frontmatter: str = "") -> 
     return path
 
 
-def run_review(root: Path) -> dict:
+def run_review(root: Path, *extra_args: str, output_format: str = "json") -> dict | str:
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--roots", str(root), "--format", "json"],
+        [sys.executable, str(SCRIPT), "--roots", str(root), "--format", output_format, *extra_args],
         text=True,
         capture_output=True,
         check=False,
     )
     if result.returncode != 0:
         raise AssertionError(result.stderr)
+    if output_format == "markdown":
+        return result.stdout
     return json.loads(result.stdout)
 
 
@@ -64,8 +67,33 @@ class ReviewCandidatesTests(unittest.TestCase):
                 frontmatter="---\nstatus: candidate\npromotion_scope: user-global\nrecommended_target: ~/.codex/AGENTS.md\n---\n",
             )
             payload = run_review(root)
+            self.assertIsInstance(payload, dict)
             self.assertEqual(payload["candidates"][0]["promotion_scope"], "user-global")
             self.assertEqual(payload["candidates"][0]["target"], "~/.codex/AGENTS.md")
+
+    def test_since_days_filters_old_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            old_path = write_candidate(root, "old.md", "Old project-specific learning.")
+            new_path = write_candidate(root, "new.md", "New workspace child repo boundary learning.")
+            old_time = 1_600_000_000
+            os.utime(old_path, (old_time, old_time))
+            payload = run_review(root, "--since-days", "1")
+            self.assertIsInstance(payload, dict)
+            names = {Path(item["path"]).name for item in payload["candidates"]}
+            self.assertEqual(names, {new_path.name})
+
+    def test_empty_results_render_json_and_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            payload = run_review(root)
+            self.assertIsInstance(payload, dict)
+            self.assertEqual(payload["candidates"], [])
+
+            markdown = run_review(root, output_format="markdown")
+            self.assertIsInstance(markdown, str)
+            self.assertIn("Candidates found: 0", markdown)
+            self.assertIn("No candidates found.", markdown)
 
 
 if __name__ == "__main__":

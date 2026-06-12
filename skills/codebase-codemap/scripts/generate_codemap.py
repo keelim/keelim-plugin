@@ -52,7 +52,7 @@ EXCLUDED_FILES = {
     ".DS_Store",
 }
 
-ALLOWED_HIDDEN_DIRS = {".github", ".codex", ".claude"}
+ALLOWED_HIDDEN_DIRS = {".github"}
 
 BINARY_EXTENSIONS = {
     ".7z",
@@ -221,7 +221,63 @@ def is_probably_binary(path: Path) -> bool:
     return b"\0" in chunk
 
 
-def iter_repo_files(root: Path) -> list[Path]:
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def default_allowed_scan_root() -> Path:
+    cwd = Path.cwd().resolve()
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd,
+            text=True,
+            capture_output=True,
+            timeout=3,
+            check=False,
+        )
+    except Exception:
+        return cwd
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip()).resolve()
+    return cwd
+
+
+def resolve_repo_root(raw_repo: str, *, allow_outside_root: bool) -> Path:
+    root = Path(raw_repo).expanduser().resolve()
+    if not root.exists() or not root.is_dir():
+        raise SystemExit(f"Repository path is not a directory: {root}")
+    if root.is_symlink():
+        raise SystemExit(f"Repository path symlink is not allowed: {root}")
+    allowed_root = default_allowed_scan_root()
+    if not allow_outside_root and not is_within(root, allowed_root):
+        raise SystemExit(
+            f"Repository path must be inside {allowed_root}; "
+            "use --allow-outside-root only for a reviewed local path"
+        )
+    return root
+
+
+def resolve_output_path(raw_output: Path, root: Path, *, allow_outside_output: bool) -> Path:
+    output = raw_output.expanduser()
+    resolved = output.resolve() if output.is_absolute() else (root / output).resolve()
+    if resolved.exists() and resolved.is_symlink():
+        raise SystemExit(f"Output path symlink is not allowed: {resolved}")
+    if not allow_outside_output and not is_within(resolved, root):
+        raise SystemExit(
+            f"Output path must stay inside scanned repository {root}; "
+            "use --allow-outside-output only for a reviewed local path"
+        )
+    return resolved
+
+
+def iter_repo_files(root: Path, *, scan_limit: int | None = None, warnings: list[str] | None = None) -> list[Path]:
     files: list[Path] = []
     for current, dirnames, filenames in os.walk(root):
         current_path = Path(current)
@@ -232,15 +288,23 @@ def iter_repo_files(root: Path) -> list[Path]:
             path = current_path / filename
             if path.name in EXCLUDED_FILES:
                 continue
-            if path.is_file() and not is_probably_binary(path):
+            if path.is_symlink():
+                continue
+            if path.is_file() and is_within(path, root) and not is_probably_binary(path):
                 files.append(path)
+                if scan_limit is not None and len(files) >= scan_limit:
+                    if warnings is not None:
+                        warnings.append(f"scan stopped after --scan-limit={scan_limit}; use --full-scan to inspect all files")
+                    return files
     return files
 
 
-def read_text(path: Path, max_bytes: int = 200_000) -> str:
+def read_text(path: Path, max_bytes: int = 200_000, warnings: list[str] | None = None) -> str:
     try:
         data = path.read_bytes()[:max_bytes]
-    except OSError:
+    except OSError as exc:
+        if warnings is not None:
+            warnings.append(f"could not read {path}: {type(exc).__name__}: {exc}")
         return ""
     return data.decode("utf-8", errors="replace")
 
@@ -325,7 +389,7 @@ def collect_directory_summary(files: list[Path], root: Path, max_items: int) -> 
 
 
 def collect_symbols(
-    files: list[Path], root: Path, max_symbol_files: int, max_symbols_per_file: int
+    files: list[Path], root: Path, max_symbol_files: int, max_symbols_per_file: int, warnings: list[str]
 ) -> list[tuple[str, list[str]]]:
     symbol_files: list[tuple[str, list[str]]] = []
     for path in files:
@@ -335,7 +399,7 @@ def collect_symbols(
         if len(symbol_files) >= max_symbol_files:
             break
         symbols: list[str] = []
-        for line_number, line in enumerate(read_text(path).splitlines(), start=1):
+        for line_number, line in enumerate(read_text(path, warnings=warnings).splitlines(), start=1):
             stripped = line.strip()
             match = pattern.search(stripped)
             if not match:
@@ -350,12 +414,12 @@ def collect_symbols(
     return symbol_files
 
 
-def read_package_scripts(root: Path) -> list[str]:
+def read_package_scripts(root: Path, warnings: list[str]) -> list[str]:
     package_json = root / "package.json"
     if not package_json.exists():
         return []
     try:
-        package = json.loads(read_text(package_json))
+        package = json.loads(read_text(package_json, warnings=warnings))
     except json.JSONDecodeError:
         return ["package.json scripts could not be parsed"]
     scripts = package.get("scripts", {})
@@ -364,12 +428,12 @@ def read_package_scripts(root: Path) -> list[str]:
     return [f"npm script `{name}`: {command}" for name, command in sorted(scripts.items())]
 
 
-def read_pyproject_scripts(root: Path) -> list[str]:
+def read_pyproject_scripts(root: Path, warnings: list[str]) -> list[str]:
     pyproject = root / "pyproject.toml"
     if not pyproject.exists() or tomllib is None:
         return []
     try:
-        parsed = tomllib.loads(read_text(pyproject))
+        parsed = tomllib.loads(read_text(pyproject, warnings=warnings))
     except Exception:
         return ["pyproject.toml could not be parsed"]
     scripts = parsed.get("project", {}).get("scripts", {})
@@ -402,19 +466,19 @@ def markdown_list(items: list[str], empty: str, limit: int | None = None) -> str
 
 
 def generate_markdown(args: argparse.Namespace) -> str:
-    root = Path(args.repo).resolve()
-    if not root.exists() or not root.is_dir():
-        raise SystemExit(f"Repository path is not a directory: {root}")
+    root = resolve_repo_root(args.repo, allow_outside_root=args.allow_outside_root)
 
-    files = iter_repo_files(root)
+    warnings: list[str] = []
+    scan_limit = None if args.full_scan else args.scan_limit
+    files = iter_repo_files(root, scan_limit=scan_limit, warnings=warnings)
     manifests = collect_manifests(files, root)
     entrypoints = collect_entrypoints(files, root)
     tests = collect_tests(files, root)
     language_counts = collect_language_counts(files)
     directories = collect_directory_summary(files, root, args.max_dirs)
-    symbols = collect_symbols(files, root, args.max_symbol_files, args.max_symbols_per_file)
-    package_scripts = read_package_scripts(root)
-    pyproject_scripts = read_pyproject_scripts(root)
+    symbols = collect_symbols(files, root, args.max_symbol_files, args.max_symbols_per_file, warnings)
+    package_scripts = read_package_scripts(root, warnings)
+    pyproject_scripts = read_pyproject_scripts(root, warnings)
     read_first = select_read_first(files, root, manifests, entrypoints)
     repo_shape = classify_repo(files, root)
 
@@ -478,6 +542,10 @@ def generate_markdown(args: argparse.Namespace) -> str:
         lines.append("- No root `AGENTS.md` was found; check for deeper instruction files before editing.")
     if not entrypoints:
         lines.append("- Entrypoints were not obvious from file names; inspect manifests and top-level directories.")
+    for warning in warnings[: args.max_warnings]:
+        lines.append(f"- Scan warning: {warning}")
+    if len(warnings) > args.max_warnings:
+        lines.append(f"- ... {len(warnings) - args.max_warnings} more scan warnings")
     if tests and any(path.startswith("docs/CODEMAPS/") for path in manifests):
         lines.append("- No immediate structural gaps detected by the generator; verify claims against source before editing.")
 
@@ -507,13 +575,26 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--max-commands", type=int, default=30, help="Maximum commands to list")
     parser.add_argument("--max-symbol-files", type=int, default=80, help="Maximum files with symbol landmarks")
     parser.add_argument("--max-symbols-per-file", type=int, default=8, help="Maximum symbols per file")
+    parser.add_argument("--scan-limit", type=int, default=1000, help="Maximum non-binary files to scan before stopping")
+    parser.add_argument("--full-scan", action="store_true", help="Scan all files instead of stopping at --scan-limit")
+    parser.add_argument("--max-warnings", type=int, default=20, help="Maximum scan warnings to list")
+    parser.add_argument(
+        "--allow-outside-root",
+        action="store_true",
+        help="allow scanning a directory outside the current git/work tree after local review",
+    )
+    parser.add_argument(
+        "--allow-outside-output",
+        action="store_true",
+        help="allow writing output outside the scanned repository after local review",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
     markdown = generate_markdown(args)
-    root = Path(args.repo).resolve()
+    root = resolve_repo_root(args.repo, allow_outside_root=args.allow_outside_root)
     output: Path | None = None
     if args.output:
         output = Path(args.output)
@@ -523,8 +604,7 @@ def main(argv: list[str]) -> int:
         output = Path("docs/CODEMAPS") / project_filename(root, args.project_name)
 
     if output is not None:
-        if not output.is_absolute():
-            output = root / output
+        output = resolve_output_path(output, root, allow_outside_output=args.allow_outside_output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(markdown, encoding="utf-8")
         print(f"Wrote {output}")

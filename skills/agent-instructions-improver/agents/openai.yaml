@@ -1,4 +1,4 @@
 interface:
   display_name: "Agent Instructions Improver"
-  short_description: "Audit and improve AGENTS.md-style guides"
-  default_prompt: "Use $agent-instructions-improver to audit this repository's AGENTS.md and related agent instruction files, then propose targeted improvements."
+  short_description: "Audit AGENTS.md guides and distill durable session learnings"
+  default_prompt: "Use $agent-instructions-improver to audit this repository's AGENTS.md and related agent instruction files, or turn durable session learnings into targeted AGENTS.md updates."

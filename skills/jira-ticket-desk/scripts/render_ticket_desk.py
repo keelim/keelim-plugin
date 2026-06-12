@@ -35,6 +35,14 @@ FORBIDDEN_HTML_PATTERNS = (
     "link href",
     "@import",
 )
+FORBIDDEN_HTML_REGEXES = (
+    (re.compile(r"https?://", re.IGNORECASE), "remote URL"),
+    (re.compile(r"\b(?:src|href)\s*=\s*['\"]//", re.IGNORECASE), "protocol-relative asset URL"),
+    (re.compile(r"url\(\s*['\"]?//", re.IGNORECASE), "protocol-relative CSS URL"),
+    (re.compile(r"<script\b[^>]*\bsrc\s*=", re.IGNORECASE), "external script src"),
+    (re.compile(r"<link\b[^>]*\bhref\s*=", re.IGNORECASE), "external link href"),
+    (re.compile(r"<iframe\b", re.IGNORECASE), "iframe"),
+)
 
 REMOTE_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
@@ -42,6 +50,28 @@ REMOTE_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def resolve_output_path(raw_output: Path, allowed_root: Path, *, allow_outside_output: bool) -> Path:
+    output = raw_output.expanduser()
+    root = allowed_root.expanduser().resolve()
+    resolved = output.resolve() if output.is_absolute() else (root / output).resolve()
+    if resolved.exists() and resolved.is_symlink():
+        raise ValueError(f"output path symlink is not allowed: {resolved}")
+    if not allow_outside_output and not is_within(resolved, root):
+        raise ValueError(
+            f"output path must stay under {root}; "
+            "pass --allow-outside-output only for a reviewed local path"
+        )
+    return resolved
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> None:
@@ -245,14 +275,20 @@ def demo_payload() -> List[Dict[str, Any]]:
     ]
 
 
-def check_html(path: Path) -> List[str]:
-    content = path.read_text(encoding="utf-8")
+def check_html_text(content: str) -> List[str]:
     lowered = content.lower()
     failures = []
     for pattern in FORBIDDEN_HTML_PATTERNS:
         if pattern.lower() in lowered:
             failures.append(pattern)
+    for regex, label in FORBIDDEN_HTML_REGEXES:
+        if regex.search(content):
+            failures.append(label)
     return failures
+
+
+def check_html(path: Path) -> List[str]:
+    return check_html_text(path.read_text(encoding="utf-8"))
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -265,6 +301,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--output", type=Path, help="Output HTML file")
     parser.add_argument("--demo", action="store_true", help="Render built-in demo tickets")
     parser.add_argument("--check-html", type=Path, help="Validate an existing HTML file for offline constraints")
+    parser.add_argument(
+        "--allow-outside-output",
+        action="store_true",
+        help="allow --output or --data-output outside the input/current directory after local review",
+    )
     args = parser.parse_args(argv)
 
     if args.check_html:
@@ -275,27 +316,45 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Offline check passed: {args.check_html}")
         return 0
 
+    allowed_output_root = Path.cwd()
     if args.data:
+        allowed_output_root = args.data.expanduser().resolve().parent
         desk_data = normalize_desk_data(load_json(args.data))
     elif args.demo:
         desk_data = build_desk_data(demo_payload(), {})
     elif args.tickets:
+        allowed_output_root = args.tickets.expanduser().resolve().parent
         desk_data = build_desk_data(extract_issues(load_json(args.tickets)), load_rules(args.rules))
     else:
         parser.error("provide --data, --tickets, or --demo")
 
     if args.data_output:
-        write_json(args.data_output, desk_data)
-        print(f"Wrote data {args.data_output} with {len(desk_data.get('tickets', []))} tickets")
+        try:
+            data_output = resolve_output_path(
+                args.data_output,
+                allowed_output_root,
+                allow_outside_output=args.allow_outside_output,
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        write_json(data_output, desk_data)
+        print(f"Wrote data {data_output} with {len(desk_data.get('tickets', []))} tickets")
 
     if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(render_html(desk_data, args.template), encoding="utf-8")
-        failures = check_html(args.output)
+        html = render_html(desk_data, args.template)
+        failures = check_html_text(html)
         if failures:
             print("Generated HTML failed offline check: " + ", ".join(failures), file=sys.stderr)
             return 1
-        print(f"Wrote {args.output} with {len(desk_data.get('tickets', []))} tickets")
+        try:
+            output = resolve_output_path(args.output, allowed_output_root, allow_outside_output=args.allow_outside_output)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(html, encoding="utf-8")
+        print(f"Wrote {output} with {len(desk_data.get('tickets', []))} tickets")
 
     if not args.output and not args.data_output:
         parser.error("provide --output or --data-output")

@@ -23,8 +23,15 @@ ENV_LIKE = {
     "USER",
     "TMPDIR",
 }
+AUTH_HEADER_RE = re.compile(r"(?i)(authorization\s*[:=]\s*)(bearer|basic)\s+([^,\s\"']+)")
 SECRET_RE = re.compile(
-    r"(?i)(api[_-]?key|token|secret|password|authorization|credential)([=:]\s*)([^,\s\"']+)"
+    r"(?i)(api[_-]?key|token|secret|password|authorization|credential)([\"'\s:=]+)([^,\s\"']+)"
+)
+SECRET_KEY_RE = re.compile(r"(?i)(api[_-]?key|token|secret|password|authorization|credentials?|auth)")
+SECRET_VALUE_RE = re.compile(
+    r"(?i)\b(?:bearer|basic)\s+[-A-Za-z0-9_/.+=]{8,}\b|"
+    r"\b(?:sk|ghp|gho|github_pat|xox[baprs])-[-A-Za-z0-9_/.+=]{8,}\b|"
+    r"\b[A-Za-z0-9_/.+=-]{32,}\b"
 )
 OFFLINE_FORBIDDEN = (
     "http://",
@@ -49,7 +56,12 @@ def timestamp_slug() -> str:
 
 
 def safe_text(value: Any, limit: int = 160) -> str:
-    text = "" if value is None else str(value)
+    redacted = redact_value(value)
+    if isinstance(redacted, (dict, list)):
+        text = json.dumps(redacted, ensure_ascii=False, sort_keys=True)
+    else:
+        text = "" if redacted is None else str(redacted)
+    text = AUTH_HEADER_RE.sub(lambda m: f"{m.group(1)}{m.group(2)} [REDACTED]", text)
     text = SECRET_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}[REDACTED]", text)
     text = text.replace("\x00", "")
     if len(text) > limit:
@@ -57,8 +69,58 @@ def safe_text(value: Any, limit: int = 160) -> str:
     return text
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
+def redact_value(value: Any, key_hint: str = "") -> Any:
+    if value is None:
+        return None
+    if SECRET_KEY_RE.search(key_hint):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(key): redact_value(item, str(key)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_value(item, key_hint) for item in value]
+    if isinstance(value, str):
+        return SECRET_VALUE_RE.sub("[REDACTED]", value)
+    return value
+
+
+def display_path(path: Path, cwd: Path | None = None) -> str:
+    resolved = path.expanduser().resolve()
+    if cwd is not None:
+        try:
+            return resolved.relative_to(cwd.resolve()).as_posix()
+        except ValueError:
+            pass
+    try:
+        return "~/" + resolved.relative_to(Path.home().resolve()).as_posix()
+    except ValueError:
+        return resolved.name
+
+
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def resolve_output_dir(raw_out: str | None, cwd: Path, *, allow_outside_output: bool) -> Path:
+    allowed_root = cwd / ".omx" / "session-usage"
+    if not raw_out:
+        return allowed_root / timestamp_slug()
+    out = Path(raw_out).expanduser()
+    resolved = out.resolve() if out.is_absolute() else (cwd / out).resolve()
+    if resolved.exists() and resolved.is_symlink():
+        raise SystemExit(f"output directory symlink is not allowed: {resolved}")
+    if not allow_outside_output and not is_within(resolved, allowed_root):
+        raise SystemExit(
+            f"--out must stay under {allowed_root}; "
+            "use --allow-outside-output only for a reviewed local path"
+        )
+    return resolved
+
+
+def read_jsonl(path: Path):
     with path.open(encoding="utf-8") as handle:
         for line_no, line in enumerate(handle, 1):
             if not line.strip():
@@ -66,11 +128,10 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
             try:
                 record = json.loads(line)
             except json.JSONDecodeError:
-                records.append({"_parse_warning": f"{path}:{line_no}: invalid json"})
+                yield {"_parse_warning": f"{path}:{line_no}: invalid json"}
                 continue
             if isinstance(record, dict):
-                records.append(record)
-    return records
+                yield record
 
 
 def h(value: Any, limit: int = 160) -> str:
@@ -89,8 +150,8 @@ class UsageCollector:
         self.sessions: set[str] = set()
         self.provider_event_counts: Counter[str] = Counter()
 
-    def add_input(self, provider: str, path: Path) -> None:
-        self.input_files.append({"provider": provider, "path": str(path)})
+    def add_input(self, provider: str, path: Path, cwd: Path | None = None) -> None:
+        self.input_files.append({"provider": provider, "path": display_path(path, cwd)})
 
     def add_event(self, provider: str, kind: str, name: str, timestamp: str | None = None) -> None:
         name = safe_text(name, 120)
@@ -139,8 +200,8 @@ def count_skill_mentions(collector: UsageCollector, provider: str, content: Any,
             collector.add_event(provider, "skill", name, timestamp)
 
 
-def parse_codex(path: Path, collector: UsageCollector) -> None:
-    collector.add_input("codex", path)
+def parse_codex(path: Path, collector: UsageCollector, cwd: Path | None = None) -> None:
+    collector.add_input("codex", path, cwd)
     for record in read_jsonl(path):
         if "_parse_warning" in record:
             collector.warning(record["_parse_warning"])
@@ -173,8 +234,8 @@ def parse_codex(path: Path, collector: UsageCollector) -> None:
             count_skill_mentions(collector, "codex", payload.get("content"), timestamp)
 
 
-def parse_claude(path: Path, collector: UsageCollector) -> None:
-    collector.add_input("claude", path)
+def parse_claude(path: Path, collector: UsageCollector, cwd: Path | None = None) -> None:
+    collector.add_input("claude", path, cwd)
     for record in read_jsonl(path):
         if "_parse_warning" in record:
             collector.warning(record["_parse_warning"])
@@ -225,24 +286,40 @@ def newest(paths: list[Path]) -> Path | None:
 
 def codex_meta_cwd(path: Path) -> str | None:
     try:
-        for record in read_jsonl(path):
-            payload = record.get("payload")
-            if record.get("type") == "session_meta" and isinstance(payload, dict):
-                cwd = payload.get("cwd")
-                return str(cwd) if cwd else None
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    return None
+                if not isinstance(record, dict):
+                    continue
+                payload = record.get("payload")
+                if record.get("type") == "session_meta" and isinstance(payload, dict):
+                    cwd = payload.get("cwd")
+                    return str(cwd) if cwd else None
+                return None
     except OSError:
         return None
     return None
 
 
-def find_current_codex(cwd: Path) -> list[Path]:
+def newest_by_mtime(paths, limit: int | None = None) -> list[Path]:
+    candidates = sorted((path for path in paths if path.is_file()), key=lambda path: path.stat().st_mtime, reverse=True)
+    return candidates if limit is None else candidates[:limit]
+
+
+def find_current_codex(cwd: Path, scan_limit: int = 120, *, include_any_cwd: bool = False) -> list[Path]:
     root = Path.home() / ".codex" / "sessions"
     if not root.is_dir():
         return []
-    candidates = sorted(root.glob("*/*/*/*.jsonl"))
-    matching = [path for path in candidates if codex_meta_cwd(path) == str(cwd.resolve())]
-    pick = newest(matching) or newest(candidates)
-    return [pick] if pick else []
+    candidates = newest_by_mtime(root.glob("*/*/*/*.jsonl"), scan_limit)
+    for path in candidates:
+        if codex_meta_cwd(path) == str(cwd.resolve()):
+            return [path]
+    return candidates[:1] if include_any_cwd else []
 
 
 def find_current_claude(cwd: Path) -> list[Path]:
@@ -488,6 +565,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--codex-session", action="append", default=[], help="Path to a Codex session JSONL file.")
     parser.add_argument("--claude-session", action="append", default=[], help="Path to a Claude session JSONL file.")
     parser.add_argument("--out", help="Output directory. Defaults to .omx/session-usage/<timestamp>.")
+    parser.add_argument("--scan-limit", type=int, default=120, help="Maximum recent Codex session files to inspect for --current")
+    parser.add_argument(
+        "--include-any-cwd",
+        action="store_true",
+        help="allow --current to fall back to the newest Codex session even when cwd does not match",
+    )
+    parser.add_argument(
+        "--allow-outside-output",
+        action="store_true",
+        help="allow --out outside .omx/session-usage after local review",
+    )
     return parser.parse_args()
 
 
@@ -497,23 +585,27 @@ def main() -> int:
     codex_paths = [Path(path).expanduser() for path in args.codex_session]
     claude_paths = [Path(path).expanduser() for path in args.claude_session]
     if args.current or (not codex_paths and not claude_paths):
-        codex_paths.extend(path for path in find_current_codex(cwd) if path not in codex_paths)
+        codex_paths.extend(
+            path
+            for path in find_current_codex(cwd, args.scan_limit, include_any_cwd=args.include_any_cwd)
+            if path not in codex_paths
+        )
         claude_paths.extend(path for path in find_current_claude(cwd) if path not in claude_paths)
     collector = UsageCollector()
     for path in codex_paths:
         if path.is_file():
-            parse_codex(path, collector)
+            parse_codex(path, collector, cwd)
         else:
             collector.warning(f"missing codex session: {path}")
     for path in claude_paths:
         if path.is_file():
-            parse_claude(path, collector)
+            parse_claude(path, collector, cwd)
         else:
             collector.warning(f"missing claude session: {path}")
     if not collector.input_files:
         collector.warning("no input files were discovered; pass --codex-session or --claude-session explicitly")
     summary = build_summary(collector)
-    out_dir = Path(args.out).expanduser() if args.out else Path(".omx") / "session-usage" / timestamp_slug()
+    out_dir = resolve_output_dir(args.out, cwd, allow_outside_output=args.allow_outside_output)
     summary_path, html_path = write_outputs(summary, out_dir)
     print(f"summary: {summary_path}")
     print(f"html: {html_path}")

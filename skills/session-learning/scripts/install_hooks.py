@@ -35,7 +35,16 @@ class HookTarget:
 
 
 def utc_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+
+
+def unique_backup_path(path: Path) -> Path:
+    for index in range(100):
+        suffix = f"-{index}" if index else ""
+        backup = path.with_name(f"{path.name}.bak-{utc_stamp()}{suffix}")
+        if not backup.exists():
+            return backup
+    raise RuntimeError(f"could not allocate unique backup path for {path}")
 
 
 def run_git(args: list[str], cwd: Path) -> str:
@@ -101,6 +110,46 @@ def hook_command(skill_root: Path, scope_root: Path | None, phase: str, pid: str
     return " ".join(shlex.quote(part) for part in parts)
 
 
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def validate_skill_root(skill_root: Path, *, trust_external: bool) -> Path:
+    default_root = skill_root_from_script().resolve()
+    resolved = skill_root.expanduser().resolve()
+    observe = resolved / "hooks" / "observe.sh"
+    if resolved != default_root and not trust_external:
+        raise SystemExit(
+            f"--skill-root must be the bundled skill root ({default_root}); "
+            "use --trust-skill-root only after reviewing observe.sh"
+        )
+    if resolved.is_symlink() or observe.is_symlink():
+        raise SystemExit(f"skill root or observe.sh symlink is not allowed: {resolved}")
+    if not observe.is_file():
+        raise SystemExit(f"observe.sh not found under skill root: {observe}")
+    if not os.access(observe, os.R_OK):
+        raise SystemExit(f"observe.sh is not readable: {observe}")
+    return resolved
+
+
+def validate_hook_target_path(path: Path, default_path: Path, *, allow_custom: bool) -> Path:
+    resolved = path.expanduser().resolve()
+    default_resolved = default_path.expanduser().resolve()
+    if resolved != default_resolved and not allow_custom:
+        raise SystemExit(
+            f"custom hook config path requires --allow-custom-hooks-path: {resolved}"
+        )
+    if resolved.exists() and resolved.is_symlink():
+        raise SystemExit(f"hook config path symlink is not allowed: {resolved}")
+    if not resolved.name.endswith("hooks.json"):
+        raise SystemExit(f"hook config path must end with hooks.json: {resolved}")
+    return resolved
+
+
 def command_has_marker(entry: Any, pid: str) -> bool:
     if not isinstance(entry, dict):
         return False
@@ -147,7 +196,7 @@ def write_config(path: Path, payload: dict[str, Any], dry_run: bool) -> str | No
     path.parent.mkdir(parents=True, exist_ok=True)
     backup_path: str | None = None
     if path.exists():
-        backup = path.with_name(f"{path.name}.bak-{utc_stamp()}")
+        backup = unique_backup_path(path)
         backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
         backup_path = str(backup)
     content = dump_config(payload)
@@ -306,9 +355,27 @@ def status_target(target: HookTarget, skill_root: Path, pid: str) -> dict[str, A
 def selected_targets(args: argparse.Namespace) -> list[HookTarget]:
     targets: list[HookTarget] = []
     if args.target in {"both", "codex"}:
-        targets.append(HookTarget("codex", Path(args.codex_hooks_path).expanduser()))
+        targets.append(
+            HookTarget(
+                "codex",
+                validate_hook_target_path(
+                    Path(args.codex_hooks_path),
+                    default_codex_hooks_path(),
+                    allow_custom=args.allow_custom_hooks_path,
+                ),
+            )
+        )
     if args.target in {"both", "claude"}:
-        targets.append(HookTarget("claude", Path(args.claude_hooks_path).expanduser()))
+        targets.append(
+            HookTarget(
+                "claude",
+                validate_hook_target_path(
+                    Path(args.claude_hooks_path),
+                    default_claude_hooks_path(),
+                    allow_custom=args.allow_custom_hooks_path,
+                ),
+            )
+        )
     return targets
 
 
@@ -325,6 +392,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--skill-root", default=str(skill_root_from_script()))
     parser.add_argument("--codex-hooks-path", default=str(default_codex_hooks_path()))
     parser.add_argument("--claude-hooks-path", default=str(default_claude_hooks_path()))
+    parser.add_argument(
+        "--trust-skill-root",
+        action="store_true",
+        help="allow an external --skill-root after reviewing hooks/observe.sh",
+    )
+    parser.add_argument(
+        "--allow-custom-hooks-path",
+        action="store_true",
+        help="allow custom hook config paths after verifying the destination",
+    )
     return parser.parse_args(argv)
 
 
@@ -333,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
     dry_run = not args.apply or args.dry_run
     scope = "global" if args.global_scope else args.scope
     project_root = detect_project_root(args.project_root)
-    skill_root = Path(args.skill_root).expanduser().resolve()
+    skill_root = validate_skill_root(Path(args.skill_root), trust_external=args.trust_skill_root)
     scope_root = None if scope == "global" else project_root
     pid = "global" if scope == "global" else project_id(project_root)
 

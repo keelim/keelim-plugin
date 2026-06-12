@@ -28,6 +28,7 @@ def run_installer(project: Path, codex: Path, claude: Path, *args: str) -> subpr
             str(codex),
             "--claude-hooks-path",
             str(claude),
+            "--allow-custom-hooks-path",
             *args,
         ],
         text=True,
@@ -75,6 +76,63 @@ class InstallHooksTests(unittest.TestCase):
             self.assertIn("SESSION_LEARNING_SCOPE_ROOT=", command)
             self.assertIn("observe.sh pre", command)
 
+    def test_custom_hook_path_requires_explicit_allow_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            codex = root / "codex-hooks.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--project-root",
+                    str(root),
+                    "--skill-root",
+                    str(SKILL_ROOT),
+                    "--target",
+                    "codex",
+                    "--codex-hooks-path",
+                    str(codex),
+                    "--apply",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--allow-custom-hooks-path", result.stderr)
+            self.assertFalse(codex.exists())
+
+    def test_external_skill_root_requires_trust_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            external_skill = root / "external-skill"
+            hook = external_skill / "hooks" / "observe.sh"
+            hook.parent.mkdir(parents=True)
+            hook.write_text("#!/bin/sh\n", encoding="utf-8")
+            codex = root / "codex-hooks.json"
+            claude = root / "claude-hooks.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--project-root",
+                    str(root),
+                    "--skill-root",
+                    str(external_skill),
+                    "--codex-hooks-path",
+                    str(codex),
+                    "--claude-hooks-path",
+                    str(claude),
+                    "--allow-custom-hooks-path",
+                    "--apply",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--trust-skill-root", result.stderr)
+
     def test_global_scope_omits_project_scope_root(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -102,6 +160,20 @@ class InstallHooksTests(unittest.TestCase):
             for event in ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "PreCompact", "PostCompact"):
                 self.assertEqual(len(session_entries(codex_config, event)), 1)
                 self.assertEqual(len(session_entries(claude_config, event)), 1)
+
+    def test_backups_do_not_collide(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            codex = root / "codex-hooks.json"
+            claude = root / "claude-hooks.json"
+            codex.write_text(json.dumps({"hooks": {}}), encoding="utf-8")
+            first = run_installer(root, codex, claude, "--target", "codex", "--apply")
+            second = run_installer(root, codex, claude, "--target", "codex", "--uninstall", "--apply")
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            backups = sorted(root.glob("codex-hooks.json.bak-*"))
+            self.assertEqual(len(backups), 2)
+            self.assertEqual(len({backup.name for backup in backups}), 2)
 
     def test_uninstall_preserves_unrelated_hooks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

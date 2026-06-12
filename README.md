@@ -13,7 +13,7 @@ A personal skill collection for both Codex and Claude.
 - `skills/<skill-name>/agents/openai.yaml`: optional Codex UI metadata
 
 ## Current skills
-- `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files that reports quality findings before proposing targeted updates
+- `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files, including durable session-to-AGENTS.md updates, that reports quality findings before proposing targeted changes
 - `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
 - `html-report-generator`: a reusable offline HTML report foundation with generic block-model JSON, a stdlib renderer, template asset, and security validation
 - `jira-ticket-desk`: a read-only Jira triage workflow that merges local ticket rules and renders a secure offline HTML desk from a reusable template plus JSON data
@@ -74,6 +74,19 @@ uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugi
 SkillOpt-generated candidates are picked up automatically from
 `.skillopt/outputs/<skill>/**/best_skill.md`. Keep `.skillopt/` ignored; it may
 contain model traces, split data, reports, and smoke candidates.
+
+## Repo-local validation
+
+Run the local script, skill, and eval checks before promoting skill or eval
+changes:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/run-tests.py
+```
+
+The runner compiles repo Python entrypoints, executes bundled stdlib tests,
+checks local skill metadata, refreshes the generated catalog in check mode, and
+runs `git diff --check`.
 
 ## Codex-only SkillOpt
 

@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "fixture-plugin-frontmatter-001",
+      "response": "The tech-post-maker SKILL.md should keep its frontmatter, stay concise, and preserve resource guidance before promotion.",
+      "expected": {
+        "must_find": ["tech-post-maker", "frontmatter", "concise"],
+        "must_not_claim": ["OpenAI API key is required", "Claude is required"],
+        "must_not_do": ["delete bundled resources"]
+      }
+    },
+    {
+      "id": "fixture-plugin-resources-002",
+      "response": "For html-report-generator, preserve scripts and references while grounding any change in repository evidence.",
+      "expected": {
+        "must_find": ["html-report-generator", "scripts", "evidence"],
+        "must_not_claim": ["Qwen is required"],
+        "must_not_do": ["discard frontmatter"]
+      }
+    },
+    {
+      "id": "fixture-plugin-provider-drift-003",
+      "response": "The session-learning update should mention validation commands and avoid provider or API-key drift.",
+      "expected": {
+        "must_find": ["session-learning", "validation commands", "provider"],
+        "must_not_claim": ["Azure key is required"],
+        "must_not_do": ["rewrite unrelated files"]
+      }
+    }
+  ]
+}

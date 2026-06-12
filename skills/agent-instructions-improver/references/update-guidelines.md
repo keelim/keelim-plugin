@@ -6,6 +6,8 @@ Only add information that will genuinely help future agent sessions. The context
 
 Prefer `AGENTS.md` as the canonical shared guide. Use platform-specific files only for compatibility pointers, platform-only behavior, or local overrides.
 
+When the input is a session, transcript, handoff, or debugging narrative, treat it as raw evidence. Promote only durable operating knowledge that a future agent can reuse.
+
 ## What TO Add
 
 ### 1. Commands/Workflows Discovered
@@ -63,6 +65,17 @@ Why: Establishes patterns that work.
 
 Why: Environment-specific knowledge.
 
+### 6. Durable Session Learnings
+
+```markdown
+## Workflow
+
+- In multi-repo workspaces, use the root dispatcher for child-repo searches instead of creating a mixed aggregate index.
+- For workflows with external side effects, verify the live external state before treating local metadata as current.
+```
+
+Why: These are reusable rules discovered during real sessions, not a record of a single task.
+
 ## What NOT to Add
 
 ### 1. Obvious Code Info
@@ -108,6 +121,20 @@ Good:
 Auth: JWT with HS256, tokens in `Authorization: Bearer <token>` header.
 ```
 
+### 5. Session Logs or Status
+
+Bad:
+```markdown
+Yesterday we fixed the upload dialog and got blocked on draft 123.
+```
+
+This belongs in a handoff, issue, or commit, not a durable instruction file.
+
+Good:
+```markdown
+For upload workflows, verify the live platform state before syncing local package metadata.
+```
+
 ## Diff Format for Updates
 
 For each suggested change:
@@ -150,4 +177,5 @@ Before finalizing an update, verify:
 - [ ] File paths are accurate
 - [ ] Would a new agent session find this helpful?
 - [ ] Shared guidance belongs in `AGENTS.md`, not duplicated across platform-specific files
+- [ ] Session-derived entries are durable rules, not status notes or transcript residue
 - [ ] Is this the most concise way to express the info?

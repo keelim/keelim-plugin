@@ -6,3 +6,7 @@ dependencies = []
 
 [tool.uv]
 package = false
+
+[tool.keelim-plugin.validation]
+command = "uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/run-tests.py"
+skillopt_validate = "uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py validate"
