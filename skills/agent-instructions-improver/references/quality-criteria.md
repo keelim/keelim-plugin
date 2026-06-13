@@ -114,7 +114,8 @@ Treat session residue as a conciseness and currency problem. A good `AGENTS.md` 
 
 1. Read the instruction file completely
 2. Cross-reference with actual codebase:
-   - Run documented commands (mentally or actually)
+   - Run documented commands when feasible
+   - For commands not run, record `not run` plus the reason
    - Check if referenced files exist
    - Verify architecture descriptions
 3. Score each criterion

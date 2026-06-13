@@ -1,6 +1,6 @@
 ---
 name: codebase-codemap
-description: Generate and refresh concise, source-led codebase maps that help Codex or Claude understand a repository before planning, debugging, reviewing, refactoring, onboarding to unfamiliar code, or making multi-file changes. Use when the user asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context, or when an agent needs stronger codebase orientation before editing.
+description: Generate and refresh concise, source-led codebase maps for repositories. Use when the user explicitly asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context file, or docs/CODEMAPS update.
 ---
 
 # Codebase Codemap
@@ -23,17 +23,23 @@ sed -n '1,220p' .gitmodules
 ```
 
 Use this evidence to distinguish declared `.gitmodules` entries, active gitlinks, initialized submodules, autonomous local repos, and untracked local repos. Do not let a raw source scan blur those boundaries.
-3. Run the generator from this skill:
+3. Run the generator from this skill. From this repository checkout:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python /path/to/codebase-codemap/scripts/generate_codemap.py /path/to/repo
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/generate_codemap.py .
+```
+
+From a project where the skill was installed into `.agents/skills/`:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codebase-codemap/scripts/generate_codemap.py .
 ```
 
 By default this writes `docs/CODEMAPS/<project-name>.md` inside the target repo.
 
 4. Review the generated map before trusting it. Tighten incorrect labels, remove noisy files, and add brief human judgment only where source evidence supports it. In a superproject, treat raw nested-repo scan output as a warning sign: rewrite the root map around root-owned files and submodule/autonomous-repo status, or rerun the generator inside each child repo when that child is explicitly in scope.
 5. If the task needs deeper domain context, inspect files named in the generated "Read First", "Entrypoints", and "Symbol Landmarks" sections.
-6. For committed codemaps, run a lightweight docs verification such as `git diff --check docs/CODEMAPS/agent-codemap.md`.
+6. For committed codemaps, run a lightweight docs verification such as `git diff --check docs/CODEMAPS/<project-name>.md`. For task-local maps, run `git diff --check .omx/context/<task>-codemap.md` only when that file is intended to be committed.
 
 ## Generator Options
 Use the bundled script when a fast first-pass map is enough:
@@ -73,8 +79,9 @@ Include these sections when editing manually:
 - `Repository Shape`
 - `Entrypoints`
 - `Key Directories`
-- `Tests and Verification`
 - `Dependencies and Tooling`
+- `Useful Commands`
+- `Tests and Verification`
 - `Symbol Landmarks`
 - `Open Questions`
 

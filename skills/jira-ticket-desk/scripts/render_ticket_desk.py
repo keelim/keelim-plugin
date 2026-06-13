@@ -167,8 +167,10 @@ def load_rules_from_object(payload: Any) -> Dict[str, Dict[str, str]]:
 def classify(ticket: Mapping[str, Any], rule: Mapping[str, str]) -> str:
     requested = rule.get("bucket") or str(ticket.get("bucket") or "")
     requested = requested.lower().strip()
-    if requested in BUCKETS:
-        return requested
+    if requested:
+        if requested in BUCKETS:
+            return requested
+        return "next"
 
     text = " ".join(str(ticket.get(field, "")) for field in ("status", "priority", "summary")).lower()
     if "block" in text:

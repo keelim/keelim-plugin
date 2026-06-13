@@ -54,8 +54,13 @@ Remote URLs found in report text are replaced with `[remote-url-omitted]` before
 ```bash
 uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/test_render_html_report.py
 env PYTHONPYCACHEPREFIX=.omx/pycache uv --cache-dir .skillopt/uv-cache run --python 3.12 python -m py_compile skills/html-report-generator/scripts/render_html_report.py skills/html-report-generator/scripts/test_render_html_report.py
-uv --cache-dir .skillopt/uv-cache run --python 3.12 --with pyyaml python /Users/keelim/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/html-report-generator
 git diff --check
+```
+
+Optional local Codex skill validation, when the system validator exists:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --with pyyaml python "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" skills/html-report-generator
 ```
 
 ## Review Answer Guardrails

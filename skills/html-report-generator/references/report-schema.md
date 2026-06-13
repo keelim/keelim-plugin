@@ -12,6 +12,7 @@ Core fields:
 - `sections`: optional array of `{ "heading": "...", "body": "...", "items": [...] }`.
 - `tables`: optional array of `{ "title": "...", "columns": [...], "rows": [[...]] }`.
 - `findings`: optional array of `{ "severity": "info|low|medium|high|critical", "title": "...", "body": "..." }`.
+- `links`: optional array of local/plain-text references, either strings or `{ "label": "...", "target": "..." }`.
 - `appendix`: optional array of section-like objects.
 
 All user-provided strings must be rendered as escaped text.

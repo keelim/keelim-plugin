@@ -5,7 +5,7 @@
   "skills": [
     {
       "name": "agent-instructions-improver",
-      "description": "Audit and improve AGENTS.md and related agent instruction files across repositories. Use when the user asks to check, audit, update, improve, migrate, consolidate, or distill session learnings into AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, or project operating guides for shared AI-agent context. Reports quality findings before proposing targeted updates.",
+      "description": "Audit AGENTS.md quality, consolidate shared agent instruction files, or apply approved targeted updates to AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, and project operating guides. Use for durable session-to-instructions capture or explicit agent-instruction quality work, not simple file lookup. Reports quality findings before proposing updates.",
       "hasCodexMeta": true,
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill agent-instructions-improver -a codex -a claude-code -y --copy",
@@ -15,7 +15,7 @@
     },
     {
       "name": "codebase-codemap",
-      "description": "Generate and refresh concise, source-led codebase maps that help Codex or Claude understand a repository before planning, debugging, reviewing, refactoring, onboarding to unfamiliar code, or making multi-file changes. Use when the user asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context, or when an agent needs stronger codebase orientation before editing.",
+      "description": "Generate and refresh concise, source-led codebase maps for repositories. Use when the user explicitly asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context file, or docs/CODEMAPS update.",
       "hasCodexMeta": true,
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill codebase-codemap -a codex -a claude-code -y --copy",
@@ -45,7 +45,7 @@
     },
     {
       "name": "release-automation",
-      "description": "Use when preparing a date-based Android release from develop to main, updating versionCode, aligning an existing release PR with recent conventions, or dispatching app_deploy through GitHub Actions.",
+      "description": "Use when preparing a date-based Android release in a repo that has gradle/libs.versions.toml with versionCode, a develop-to-main release flow, and .github/workflows/app_deploy.yml. Covers dry-run inspection, explicit-confirmation updates, release PR alignment, and app_deploy dispatch.",
       "hasCodexMeta": true,
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill release-automation -a codex -a claude-code -y --copy",

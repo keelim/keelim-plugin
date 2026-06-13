@@ -49,6 +49,22 @@ def test_local_rules_override_bucket_and_reason() -> None:
     assert data["tickets"][0]["reason"] == "belongs to the platform desk"
 
 
+def test_unknown_rule_bucket_falls_back_to_next() -> None:
+    payload = [
+        {
+            "key": "APP-11",
+            "summary": "Blocked text should not override an explicit unknown bucket",
+            "status": "Blocked",
+            "assignee": "Keelim",
+            "priority": "High",
+        }
+    ]
+    rules = {"tickets": {"APP-11": {"bucket": "someday"}}}
+
+    data = render_ticket_desk.build_desk_data(payload, render_ticket_desk.load_rules_from_object(rules))
+    assert data["tickets"][0]["bucket"] == "next"
+
+
 def test_remote_urls_are_omitted_from_display_text() -> None:
     payload = [
         {
@@ -100,6 +116,7 @@ def test_output_outside_input_dir_requires_explicit_flag() -> None:
 def main() -> int:
     test_demo_html_is_offline()
     test_local_rules_override_bucket_and_reason()
+    test_unknown_rule_bucket_falls_back_to_next()
     test_remote_urls_are_omitted_from_display_text()
     test_offline_check_rejects_link_with_intervening_attributes()
     test_data_json_can_be_swapped_into_template()

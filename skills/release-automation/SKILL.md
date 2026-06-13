@@ -1,6 +1,6 @@
 ---
 name: release-automation
-description: Use when preparing a date-based Android release from develop to main, updating versionCode, aligning an existing release PR with recent conventions, or dispatching app_deploy through GitHub Actions.
+description: Use when preparing a date-based Android release in a repo that has gradle/libs.versions.toml with versionCode, a develop-to-main release flow, and .github/workflows/app_deploy.yml. Covers dry-run inspection, explicit-confirmation updates, release PR alignment, and app_deploy dispatch.
 ---
 
 # Release Automation
@@ -8,7 +8,10 @@ description: Use when preparing a date-based Android release from develop to mai
 ## Overview
 Use this skill for the recurring release flow that updates `versionCode` to today's date, verifies the build, syncs the `develop -> main` release PR, and triggers deployment.
 
-This is a docs-only skill. Follow the mode that matches the risk level you want.
+Default to `dry-run` unless the user explicitly asks for `confirm` or `execute`.
+The `confirm` and `execute` modes may mutate local files, git history, GitHub PRs,
+and GitHub Actions state, so require clear user approval before each external
+write unless the user has already approved full execute mode.
 
 ## Skill review response guardrails
 When answering review or promotion tasks about this skill, explicitly name `release-automation` and `SKILL.md` in the response, then address the requested maintenance concern directly. If asked for validation, use the word `validate` or `validation` and name the concrete checks. If asked about bundled resources, state whether `references/`, `scripts/`, or `assets/` exist instead of implying missing resources are required.
@@ -61,7 +64,9 @@ Use short confirmations such as:
 - `Dispatch app_deploy.yml on develop?`
 
 ### 3. execute
-Perform the full release flow end to end.
+Perform the full release flow end to end only after the user explicitly requests
+execute mode for the target repo and approves the external mutations in this
+workflow.
 
 ## Execute flow
 
@@ -143,7 +148,10 @@ gh run view <run-id> --json status,conclusion,url,workflowName,headBranch,event,
 ```
 
 ## Report format
-Always end with:
+For `dry-run`, end with `Would ...` statements and omit commit hashes, PR URLs,
+or workflow run URLs unless they already existed before the run.
+
+For `confirm` or `execute`, end with:
 - release version used
 - verification command and result
 - commit hash

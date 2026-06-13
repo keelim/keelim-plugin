@@ -1,6 +1,6 @@
 ---
 name: agent-instructions-improver
-description: Audit and improve AGENTS.md and related agent instruction files across repositories. Use when the user asks to check, audit, update, improve, migrate, consolidate, or distill session learnings into AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, or project operating guides for shared AI-agent context. Reports quality findings before proposing targeted updates.
+description: Audit AGENTS.md quality, consolidate shared agent instruction files, or apply approved targeted updates to AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, and project operating guides. Use for durable session-to-instructions capture or explicit agent-instruction quality work, not simple file lookup. Reports quality findings before proposing updates.
 ---
 
 # Agent Instructions Improver
@@ -34,6 +34,7 @@ When the user asks to convert a session, transcript, handoff, review, or recent 
 Find shared and platform-specific agent instruction files in the repository:
 
 ```bash
+agent_instruction_files="$(mktemp)"
 find . \( \
   -name "AGENTS.md" -o \
   -name "AGENT.md" -o \
@@ -43,8 +44,13 @@ find . \( \
   -name "GEMINI.md" -o \
   -path "*/.github/copilot-instructions.md" -o \
   -path "*/.cursor/rules/*" \
-\) 2>/dev/null | head -80
+\) 2>/dev/null | sort > "$agent_instruction_files"
+wc -l "$agent_instruction_files"
+sed -n '1,80p' "$agent_instruction_files"
 ```
+
+If the count is greater than 80, treat the printed list as a preview only. Narrow
+the scope or inspect the saved file before reporting coverage.
 
 **File Types & Locations:**
 
@@ -65,16 +71,20 @@ For each instruction file, evaluate against quality criteria. See [references/qu
 
 **Quick Assessment Checklist:**
 
+The numeric quality score is always out of 100 points:
+
 | Criterion | Weight | Check |
 |-----------|--------|-------|
-| Commands/workflows documented | High | Are build/test/deploy commands present? |
-| Architecture clarity | High | Can future agents understand the codebase structure? |
-| Non-obvious patterns | Medium | Are gotchas and quirks documented? |
-| Conciseness | Medium | No verbose explanations or obvious info? |
-| Currency | High | Does it reflect current codebase state? |
-| Actionability | High | Are instructions executable, not vague? |
-| Cross-platform fit | Medium | Is shared guidance in `AGENTS.md` and platform-specific guidance isolated? |
-| Session durability | Medium | If sourced from a session, is the learning reusable beyond the current task? |
+| Commands/workflows documented | 15 points | Are build/test/deploy commands present? |
+| Architecture clarity | 15 points | Can future agents understand the codebase structure? |
+| Non-obvious patterns | 15 points | Are gotchas and quirks documented? |
+| Conciseness | 15 points | No verbose explanations or obvious info? |
+| Currency | 15 points | Does it reflect current codebase state? |
+| Actionability | 15 points | Are instructions executable, not vague? |
+| Cross-platform fit | 10 points | Is shared guidance in `AGENTS.md` and platform-specific guidance isolated? |
+
+When the review is sourced from a session, also apply the session durability
+check. Penalize the relevant criterion above instead of adding extra points.
 
 **Quality Scores:**
 - **A (90-100)**: Comprehensive, current, actionable

@@ -117,6 +117,124 @@ def validate_codex_meta(skill_dir: Path) -> list[str]:
     return errors
 
 
+def extract_backticked_bullets(text: str) -> set[str]:
+    return set(re.findall(r"^-\s+`([^`]+)`", text, flags=re.MULTILINE))
+
+
+def validate_agent_instructions_improver(
+    skill_dir: Path, frontmatter: dict[str, Any], body: str
+) -> list[str]:
+    errors: list[str] = []
+    description = str(frontmatter.get("description", ""))
+    if "check, audit, update, improve" in description:
+        errors.append("frontmatter trigger is too broad for routing")
+    if "simple file lookup" not in description:
+        errors.append("frontmatter must exclude simple file lookup")
+    if "head -80" in body:
+        errors.append("discovery command silently truncates with head -80")
+    if "greater than 80" not in body or "preview only" not in body:
+        errors.append("discovery workflow missing truncation guard")
+
+    denominators = [int(match) for match in re.findall(r"\|\s+[^|\n]+\s+\|\s+X/(\d+)\s+\|", body)]
+    if not denominators:
+        errors.append("quality report template missing numeric score rows")
+    elif sum(denominators) != 100:
+        errors.append(f"quality report score rows sum to {sum(denominators)}, expected 100")
+
+    criteria_path = skill_dir / "references" / "quality-criteria.md"
+    if criteria_path.exists():
+        criteria = criteria_path.read_text(encoding="utf-8")
+        if "mentally or actually" in criteria:
+            errors.append("quality criteria allows mental command validation")
+        if "`not run`" not in criteria:
+            errors.append("quality criteria must require not-run reporting for skipped commands")
+    return errors
+
+
+def validate_codebase_codemap(skill_dir: Path, frontmatter: dict[str, Any], body: str) -> list[str]:
+    errors: list[str] = []
+    description = str(frontmatter.get("description", ""))
+    if "agent needs stronger codebase orientation before editing" in description:
+        errors.append("frontmatter trigger includes generic pre-edit orientation")
+    if "/path/to/codebase-codemap" in body:
+        errors.append("workflow contains non-copyable codebase-codemap placeholder path")
+    if "docs/CODEMAPS/agent-codemap.md" in body:
+        errors.append("verification path must use project-named codemap output")
+
+    schema_path = skill_dir / "references" / "codemap-schema.md"
+    if schema_path.exists():
+        schema = schema_path.read_text(encoding="utf-8")
+        marker = "Include these sections when editing manually:"
+        manual_block = body.split(marker, 1)[1] if marker in body else ""
+        required = extract_backticked_bullets(schema)
+        manual = extract_backticked_bullets(manual_block)
+        missing = sorted(required - manual)
+        if missing:
+            errors.append(
+                "manual section list missing schema required sections: " + ", ".join(missing)
+            )
+    return errors
+
+
+def validate_html_report_generator(skill_dir: Path, body: str) -> list[str]:
+    errors: list[str] = []
+    if "/Users/" in body:
+        errors.append("verification commands must not hardcode a user home path")
+    schema_path = skill_dir / "references" / "report-schema.md"
+    if schema_path.exists():
+        schema = schema_path.read_text(encoding="utf-8")
+        if "- `links`:" not in schema:
+            errors.append("report schema core fields must document links")
+    return errors
+
+
+def validate_jira_ticket_desk(skill_dir: Path, body: str) -> list[str]:
+    errors: list[str] = []
+    if "python scripts/render_ticket_desk.py" in body:
+        errors.append("renderer commands must use a skill-relative path")
+    if "skills/jira-ticket-desk/scripts/render_ticket_desk.py" not in body:
+        errors.append("renderer commands missing repo-local skill path")
+    rules_path = skill_dir / "references" / "ticket-desk-rules.md"
+    if rules_path.exists():
+        rules = rules_path.read_text(encoding="utf-8")
+        if "Unknown bucket names are normalized to `next`" not in rules:
+            errors.append("rules reference missing unknown bucket fallback contract")
+    return errors
+
+
+def validate_release_automation(frontmatter: dict[str, Any], body: str) -> list[str]:
+    errors: list[str] = []
+    description = str(frontmatter.get("description", ""))
+    for required in (
+        "gradle/libs.versions.toml",
+        "versionCode",
+        ".github/workflows/app_deploy.yml",
+    ):
+        if required not in description:
+            errors.append(f"frontmatter missing release repo constraint: {required}")
+    if "This is a docs-only skill" in body:
+        errors.append("body says docs-only while execute mode mutates external state")
+    if "Default to `dry-run`" not in body:
+        errors.append("body must state dry-run is the default release mode")
+    return errors
+
+
+def validate_skill_quality_contracts(
+    name: str, skill_dir: Path, frontmatter: dict[str, Any], body: str
+) -> list[str]:
+    if name == "agent-instructions-improver":
+        return validate_agent_instructions_improver(skill_dir, frontmatter, body)
+    if name == "codebase-codemap":
+        return validate_codebase_codemap(skill_dir, frontmatter, body)
+    if name == "html-report-generator":
+        return validate_html_report_generator(skill_dir, body)
+    if name == "jira-ticket-desk":
+        return validate_jira_ticket_desk(skill_dir, body)
+    if name == "release-automation":
+        return validate_release_automation(frontmatter, body)
+    return []
+
+
 def validate_skill(
     skill_dir: Path, readme_names: set[str], *, require_codex_meta: bool
 ) -> list[str]:
@@ -146,6 +264,7 @@ def validate_skill(
     if require_codex_meta and not meta_path.exists():
         errors.append("missing agents/openai.yaml")
     errors.extend(validate_codex_meta(skill_dir))
+    errors.extend(validate_skill_quality_contracts(name, skill_dir, frontmatter, body))
     return errors
 
 

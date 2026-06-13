@@ -51,24 +51,31 @@ Supported buckets are `focus`, `next`, `waiting`, `blocked`, `monitoring`, and `
 The normal repeated-use path is template plus data JSON:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
 ```
 
 The first command can be run only when Jira data changes. The second command can be rerun whenever the user edits `ticket-desk.data.json` locally.
 
+When the skill is installed into a project, use the installed path instead:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/jira-ticket-desk/scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/jira-ticket-desk/scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
+```
+
 For a one-shot render:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --output ticket-desk.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --output ticket-desk.html
 ```
 
 For a quick smoke test:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --data /tmp/jira-ticket-desk.data.json --output /tmp/jira-ticket-desk-demo.html
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --check-html /tmp/jira-ticket-desk-demo.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --data /tmp/jira-ticket-desk.data.json --output /tmp/jira-ticket-desk-demo.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --check-html /tmp/jira-ticket-desk-demo.html
 open /tmp/jira-ticket-desk-demo.html
 ```
 

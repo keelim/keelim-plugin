@@ -9,7 +9,7 @@
 - `ignored`: intentionally not processed by this desk. Always show a reason or note.
 
 ## Local Rule Fields
-- `bucket`: one of the supported bucket names.
+- `bucket`: one of the supported bucket names. Unknown bucket names are normalized to `next`; mention that cleanup in the user-facing report if it appears in local rules.
 - `reason`: short reason shown near the ticket.
 - `review_after`: date or short text for the next review point.
 - `note`: freeform local context.
@@ -53,7 +53,7 @@ Do not write to Jira in v1. If the user asks to mutate Jira, stop and confirm th
 The reusable data file is what the HTML template consumes. The renderer can create it from Jira JSON:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --tickets tickets.json --rules ticket-desk.rules.json --data-output ticket-desk.data.json
 ```
 
 Minimum shape:
@@ -88,7 +88,7 @@ Minimum shape:
 Render the template from a data file:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
+uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --data ticket-desk.data.json --output ticket-desk.html
 ```
 
 The template consumes only the embedded JSON object. It must not read sibling JSON files at runtime, because secure local browsers may block file reads and the output must remain self-contained.
