@@ -21,8 +21,66 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = join(REPO_ROOT, 'skills');
 const SKILL_SOURCE = 'keelim/keelim-plugin';
+const GENERATED_BY = 'scripts/gen-catalog.mjs';
+const RESOURCE_DIRS = ['references', 'scripts', 'assets', 'examples', 'hooks'];
+const GENERIC_VERIFY = 'bash scripts/verify-skills.sh --require-codex-meta';
 
-/** @typedef {{ folder: string, name: string, description: string, hasCodexMeta: boolean, errors: string[] }} SkillEntry */
+const SKILL_GUIDANCE = {
+  'agent-instructions-improver': {
+    quickStart: 'Ask the agent to audit AGENTS.md, then wait for the quality report before edits.',
+    verification: [GENERIC_VERIFY]
+  },
+  'codebase-codemap': {
+    quickStart:
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/generate_codemap.py . --stdout',
+    verification: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/test_generate_codemap.py'
+    ]
+  },
+  'html-report-generator': {
+    quickStart:
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/render_html_report.py --input skills/html-report-generator/examples/demo-report.json.sample --output /tmp/html-report-demo.html --validate',
+    verification: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/test_render_html_report.py'
+    ]
+  },
+  'jira-ticket-desk': {
+    quickStart:
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json',
+    verification: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json'
+    ]
+  },
+  'release-automation': {
+    quickStart: 'Use dry-run mode first in a repo with gradle/libs.versions.toml and app_deploy.yml.',
+    verification: [GENERIC_VERIFY]
+  },
+  'session-learning': {
+    quickStart:
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py',
+    verification: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py'
+    ],
+    postInstall: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py',
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply',
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status'
+    ]
+  },
+  'session-usage-dashboard': {
+    quickStart:
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py --current --cwd "$PWD" --out .omx/session-usage/current',
+    verification: [
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py'
+    ]
+  },
+  'tech-post-maker': {
+    quickStart: 'Ask for outline, draft, polish, or series mode with the real engineering context.',
+    verification: [GENERIC_VERIFY]
+  }
+};
+
+/** @typedef {{ folder: string, name: string, description: string, hasCodexMeta: boolean, resources: string[], quickStart: string, verification: string[], postInstall: string[], errors: string[] }} SkillEntry */
 
 /**
  * @param {string} value
@@ -138,6 +196,37 @@ function validateCodexMeta(folder) {
 }
 
 /**
+ * @param {string} folder
+ * @returns {string[]}
+ */
+function collectResources(folder) {
+  return RESOURCE_DIRS
+    .filter((name) => existsSync(join(SKILLS_DIR, folder, name)))
+    .map((name) => `${name}/`);
+}
+
+/**
+ * @param {string} folder
+ * @returns {{ quickStart: string, verification: string[], postInstall: string[] }}
+ */
+function guidanceFor(folder) {
+  const guidance = SKILL_GUIDANCE[folder] || {};
+  return {
+    quickStart: guidance.quickStart || 'Read SKILL.md and invoke the skill for its documented task.',
+    verification: guidance.verification || [GENERIC_VERIFY],
+    postInstall: guidance.postInstall || []
+  };
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function md(value) {
+  return value.replace(/\|/g, '\\|').replace(/\n/g, '<br>');
+}
+
+/**
  * Read all skills with their metadata.
  * @returns {SkillEntry[]}
  */
@@ -164,8 +253,19 @@ function readSkills() {
       if (name && name !== folder) errors.push(`frontmatter name "${name}" != folder "${folder}"`);
     }
     const hasCodexMeta = existsSync(join(SKILLS_DIR, folder, 'agents', 'openai.yaml'));
+    const guidance = guidanceFor(folder);
     errors.push(...validateCodexMeta(folder));
-    return { folder, name: name || folder, description: description || '', hasCodexMeta, errors };
+    return {
+      folder,
+      name: name || folder,
+      description: description || '',
+      hasCodexMeta,
+      resources: collectResources(folder),
+      quickStart: guidance.quickStart,
+      verification: guidance.verification,
+      postInstall: guidance.postInstall,
+      errors
+    };
   });
 }
 
@@ -194,44 +294,73 @@ function parseReadmeSkills() {
 function installCommands(s) {
   return {
     cli: `npx skills add ${SKILL_SOURCE} --skill ${s.folder} -a codex -a claude-code -y --copy`,
-    symlinkCodex: `ln -s ${join(REPO_ROOT, 'skills', s.folder)} ~/.agents/skills/${s.folder}`,
-    symlinkClaude: `ln -s ${join(REPO_ROOT, 'skills', s.folder)} ~/.claude/skills/${s.folder}`
+    symlinkCodex: `ln -s "$(pwd)/skills/${s.folder}" ~/.agents/skills/${s.folder}`,
+    symlinkClaude: `ln -s "$(pwd)/skills/${s.folder}" ~/.claude/skills/${s.folder}`
   };
 }
 
 /**
  * @param {SkillEntry[]} skills
+ * @param {string} generatedAt
  * @returns {string}
  */
-function renderMarkdown(skills) {
+function renderMarkdown(skills, generatedAt) {
   const lines = [
     '# keelim-plugin Skill Catalog',
     '',
-    `_Generated by \`scripts/gen-catalog.mjs\` - do not edit by hand. ${skills.length} skills._`,
+    `_Generated by \`${GENERATED_BY}\` at \`${generatedAt}\` from \`${SKILL_SOURCE}\` - do not edit by hand. ${skills.length} skills._`,
     '',
-    '| Skill | Codex meta | Description |',
-    '| --- | --- | --- |'
+    '| Skill | Codex meta | Resources | Quick start | Description |',
+    '| --- | --- | --- | --- | --- |'
   ];
   for (const s of skills) {
-    const desc = s.description.replace(/\|/g, '\\|');
-    lines.push(`| \`${s.folder}\` | ${s.hasCodexMeta ? 'yes' : 'no'} | ${desc} |`);
+    const codexMeta = s.hasCodexMeta ? '`agents/openai.yaml`' : 'none';
+    const resources = s.resources.length ? s.resources.map((r) => `\`${r}\``).join(', ') : 'SKILL.md only';
+    lines.push(
+      `| \`${s.folder}\` | ${codexMeta} | ${resources} | ${md(s.quickStart)} | ${md(s.description)} |`
+    );
   }
   lines.push('', '## Install matrix', '');
   for (const s of skills) {
     const cmd = installCommands(s);
+    const resources = s.resources.length ? s.resources.map((r) => `\`${r}\``).join(', ') : '`SKILL.md` only';
     lines.push(
       `### ${s.folder}`,
+      '',
+      `Bundled resources: ${resources}.`,
       '',
       '```bash',
       `# Vercel skills CLI (Codex + Claude)`,
       cmd.cli,
       '',
-      `# Manual symlink`,
+      `# Manual symlink (run from this repository root)`,
       cmd.symlinkCodex,
       cmd.symlinkClaude,
       '```',
+      '',
+      'Quick start:',
+      '',
+      '```text',
+      s.quickStart,
+      '```',
+      '',
+      'Verify:',
+      '',
+      '```bash',
+      ...s.verification,
+      '```',
       ''
     );
+    if (s.postInstall.length) {
+      lines.push(
+        'Post-install:',
+        '',
+        '```bash',
+        ...s.postInstall,
+        '```',
+        ''
+      );
+    }
   }
   return `${lines.join('\n')}\n`;
 }
@@ -249,20 +378,37 @@ function catalogGeneratedAt() {
 }
 
 /**
+ * @param {SkillEntry} s
+ * @returns {object}
+ */
+function skillJson(s) {
+  return {
+    name: s.folder,
+    path: `skills/${s.folder}`,
+    skillFile: `skills/${s.folder}/SKILL.md`,
+    codexMetaFile: s.hasCodexMeta ? `skills/${s.folder}/agents/openai.yaml` : null,
+    description: s.description,
+    hasCodexMeta: s.hasCodexMeta,
+    resources: s.resources,
+    quickStart: s.quickStart,
+    verification: s.verification,
+    postInstall: s.postInstall,
+    install: installCommands(s)
+  };
+}
+
+/**
  * @param {SkillEntry[]} skills
- * @returns {{ generatedAt: string, source: string, count: number, skills: object[] }}
+ * @returns {{ generatedAt: string, generatedBy: string, source: string, count: number, skills: object[] }}
  */
 function buildCatalogJson(skills) {
+  const generatedAt = catalogGeneratedAt();
   return {
-    generatedAt: catalogGeneratedAt(),
+    generatedAt,
+    generatedBy: GENERATED_BY,
     source: SKILL_SOURCE,
     count: skills.length,
-    skills: skills.map((s) => ({
-      name: s.folder,
-      description: s.description,
-      hasCodexMeta: s.hasCodexMeta,
-      install: installCommands(s)
-    }))
+    skills: skills.map(skillJson)
   };
 }
 
@@ -276,8 +422,9 @@ function main() {
   const missingFolders = [...readmeNames].filter((n) => !folderNames.has(n));
   const metaErrors = skills.filter((s) => s.errors.length > 0);
 
-  const catalogJsonText = `${JSON.stringify(buildCatalogJson(skills), null, 2)}\n`;
-  const catalogMarkdown = renderMarkdown(skills);
+  const catalogJson = buildCatalogJson(skills);
+  const catalogJsonText = `${JSON.stringify(catalogJson, null, 2)}\n`;
+  const catalogMarkdown = renderMarkdown(skills, catalogJson.generatedAt);
   const catalogJsonPath = join(REPO_ROOT, 'catalog.json');
   const catalogMarkdownPath = join(REPO_ROOT, 'CATALOG.md');
 

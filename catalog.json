@@ -1,86 +1,183 @@
 {
   "generatedAt": "1970-01-01T00:00:00.000Z",
+  "generatedBy": "scripts/gen-catalog.mjs",
   "source": "keelim/keelim-plugin",
   "count": 8,
   "skills": [
     {
       "name": "agent-instructions-improver",
+      "path": "skills/agent-instructions-improver",
+      "skillFile": "skills/agent-instructions-improver/SKILL.md",
+      "codexMetaFile": "skills/agent-instructions-improver/agents/openai.yaml",
       "description": "Audit AGENTS.md quality, consolidate shared agent instruction files, or apply approved targeted updates to AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, and project operating guides. Use for durable session-to-instructions capture or explicit agent-instruction quality work, not simple file lookup. Reports quality findings before proposing updates.",
       "hasCodexMeta": true,
+      "resources": [
+        "references/"
+      ],
+      "quickStart": "Ask the agent to audit AGENTS.md, then wait for the quality report before edits.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill agent-instructions-improver -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/agent-instructions-improver ~/.agents/skills/agent-instructions-improver",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/agent-instructions-improver ~/.claude/skills/agent-instructions-improver"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/agent-instructions-improver\" ~/.agents/skills/agent-instructions-improver",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/agent-instructions-improver\" ~/.claude/skills/agent-instructions-improver"
       }
     },
     {
       "name": "codebase-codemap",
+      "path": "skills/codebase-codemap",
+      "skillFile": "skills/codebase-codemap/SKILL.md",
+      "codexMetaFile": "skills/codebase-codemap/agents/openai.yaml",
       "description": "Generate and refresh concise, source-led codebase maps for repositories. Use when the user explicitly asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context file, or docs/CODEMAPS update.",
       "hasCodexMeta": true,
+      "resources": [
+        "references/",
+        "scripts/"
+      ],
+      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/generate_codemap.py . --stdout",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codebase-codemap/scripts/test_generate_codemap.py"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill codebase-codemap -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/codebase-codemap ~/.agents/skills/codebase-codemap",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/codebase-codemap ~/.claude/skills/codebase-codemap"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/codebase-codemap\" ~/.agents/skills/codebase-codemap",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/codebase-codemap\" ~/.claude/skills/codebase-codemap"
       }
     },
     {
       "name": "html-report-generator",
+      "path": "skills/html-report-generator",
+      "skillFile": "skills/html-report-generator/SKILL.md",
+      "codexMetaFile": "skills/html-report-generator/agents/openai.yaml",
       "description": "Generate secure offline HTML reports from generic block-model JSON using a reusable template, stdlib Python renderer, and offline/security validation. Use when the user wants a local standalone HTML report, a reusable HTML report foundation, or validation that a generated report does not use CDNs or external communication.",
       "hasCodexMeta": true,
+      "resources": [
+        "references/",
+        "scripts/",
+        "assets/",
+        "examples/"
+      ],
+      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/render_html_report.py --input skills/html-report-generator/examples/demo-report.json.sample --output /tmp/html-report-demo.html --validate",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/html-report-generator/scripts/test_render_html_report.py"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill html-report-generator -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/html-report-generator ~/.agents/skills/html-report-generator",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/html-report-generator ~/.claude/skills/html-report-generator"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/html-report-generator\" ~/.agents/skills/html-report-generator",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/html-report-generator\" ~/.claude/skills/html-report-generator"
       }
     },
     {
       "name": "jira-ticket-desk",
+      "path": "skills/jira-ticket-desk",
+      "skillFile": "skills/jira-ticket-desk/SKILL.md",
+      "codexMetaFile": "skills/jira-ticket-desk/agents/openai.yaml",
       "description": "Read Jira tickets through Atlassian MCP, merge local handling rules for intentionally ignored or deferred work, optionally consult Lazyweb for desktop dashboard design references, and render a secure offline pure HTML personal ticket desk from a reusable template plus replaceable JSON data. Use when the user wants to review, triage, plan, or report on Jira tickets without mutating Jira.",
       "hasCodexMeta": true,
+      "resources": [
+        "references/",
+        "scripts/",
+        "assets/"
+      ],
+      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/jira-ticket-desk/scripts/render_ticket_desk.py --demo --data-output /tmp/jira-ticket-desk.data.json"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill jira-ticket-desk -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/jira-ticket-desk ~/.agents/skills/jira-ticket-desk",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/jira-ticket-desk ~/.claude/skills/jira-ticket-desk"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/jira-ticket-desk\" ~/.agents/skills/jira-ticket-desk",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/jira-ticket-desk\" ~/.claude/skills/jira-ticket-desk"
       }
     },
     {
       "name": "release-automation",
+      "path": "skills/release-automation",
+      "skillFile": "skills/release-automation/SKILL.md",
+      "codexMetaFile": "skills/release-automation/agents/openai.yaml",
       "description": "Use when preparing a date-based Android release in a repo that has gradle/libs.versions.toml with versionCode, a develop-to-main release flow, and .github/workflows/app_deploy.yml. Covers dry-run inspection, explicit-confirmation updates, release PR alignment, and app_deploy dispatch.",
       "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Use dry-run mode first in a repo with gradle/libs.versions.toml and app_deploy.yml.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill release-automation -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/release-automation ~/.agents/skills/release-automation",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/release-automation ~/.claude/skills/release-automation"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/release-automation\" ~/.agents/skills/release-automation",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/release-automation\" ~/.claude/skills/release-automation"
       }
     },
     {
       "name": "session-learning",
+      "path": "skills/session-learning",
+      "skillFile": "skills/session-learning/SKILL.md",
+      "codexMetaFile": "skills/session-learning/agents/openai.yaml",
       "description": "Capture session observations through opt-in hooks, inspect recent Codex or Claude sessions for repeated workflows, and promote stable lessons into AGENTS.md, README.md, skills, custom subagent recommendations, or docs without letting hooks mutate canonical project files directly.",
       "hasCodexMeta": true,
+      "resources": [
+        "scripts/",
+        "hooks/"
+      ],
+      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py"
+      ],
+      "postInstall": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status"
+      ],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill session-learning -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/session-learning ~/.agents/skills/session-learning",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/session-learning ~/.claude/skills/session-learning"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/session-learning\" ~/.agents/skills/session-learning",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/session-learning\" ~/.claude/skills/session-learning"
       }
     },
     {
       "name": "session-usage-dashboard",
+      "path": "skills/session-usage-dashboard",
+      "skillFile": "skills/session-usage-dashboard/SKILL.md",
+      "codexMetaFile": "skills/session-usage-dashboard/agents/openai.yaml",
       "description": "Build a secure offline HTML dashboard and JSON summary from Codex and Claude session JSONL logs. Use when the user wants to track agent tool usage, skill invocations, subagent kinds, session harness activity, or usage counts for Codex/Claude runs without exposing raw prompts, tool arguments, or tool outputs.",
       "hasCodexMeta": true,
+      "resources": [
+        "references/",
+        "scripts/"
+      ],
+      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/build_session_usage_dashboard.py --current --cwd \"$PWD\" --out .omx/session-usage/current",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-usage-dashboard/scripts/test_build_session_usage_dashboard.py"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill session-usage-dashboard -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/session-usage-dashboard ~/.agents/skills/session-usage-dashboard",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/session-usage-dashboard ~/.claude/skills/session-usage-dashboard"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/session-usage-dashboard\" ~/.agents/skills/session-usage-dashboard",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/session-usage-dashboard\" ~/.claude/skills/session-usage-dashboard"
       }
     },
     {
       "name": "tech-post-maker",
+      "path": "skills/tech-post-maker",
+      "skillFile": "skills/tech-post-maker/SKILL.md",
+      "codexMetaFile": "skills/tech-post-maker/agents/openai.yaml",
       "description": "Use when writing first-person technical posts in a personal engineer voice, especially build logs, case studies, workflow write-ups, or series posts about tools, systems, and engineering habits.",
       "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Ask for outline, draft, polish, or series mode with the real engineering context.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
       "install": {
         "cli": "npx skills add keelim/keelim-plugin --skill tech-post-maker -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/tech-post-maker ~/.agents/skills/tech-post-maker",
-        "symlinkClaude": "ln -s /Users/keelim/Desktop/keelim-maestro/keelim-plugin/skills/tech-post-maker ~/.claude/skills/tech-post-maker"
+        "symlinkCodex": "ln -s \"$(pwd)/skills/tech-post-maker\" ~/.agents/skills/tech-post-maker",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/tech-post-maker\" ~/.claude/skills/tech-post-maker"
       }
     }
   ]
