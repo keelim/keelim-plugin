@@ -4,9 +4,46 @@ version = "0.0.0"
 requires-python = ">=3.12,<3.13"
 dependencies = []
 
+[dependency-groups]
+dev = [
+    "mypy>=1.16,<2",
+    "pre-commit>=4,<5",
+    "pytest>=8,<9",
+    "pyyaml>=6,<7",
+    "ruff>=0.11,<1",
+]
+
 [tool.uv]
 package = false
 
 [tool.keelim-plugin.validation]
-command = "uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/run-tests.py"
+command = "bash scripts/check.sh"
 skillopt_validate = "uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py validate"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    ".omx",
+    ".skillopt",
+    ".venv",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["scripts"]
+exclude = [
+    "^\\.omx/",
+    "^\\.skillopt/",
+    "^\\.venv/",
+    "^evals/",
+]
+check_untyped_defs = true
+ignore_missing_imports = true
+pretty = true
+warn_unused_ignores = true

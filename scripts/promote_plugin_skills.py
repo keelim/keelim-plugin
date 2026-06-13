@@ -7,11 +7,12 @@ import argparse
 import difflib
 import json
 import re
+import subprocess
+import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = REPO_ROOT / "skills"
@@ -21,6 +22,10 @@ DEFAULT_CANDIDATE_ROOTS = [
     SKILLOPT_ROOT / "outputs",
 ]
 STAGE_ROOT = SKILLOPT_ROOT / "promote-candidates"
+POST_APPLY_CHECKS = [
+    ["node", "scripts/gen-catalog.mjs"],
+    [sys.executable, "scripts/run-tests.py"],
+]
 
 
 @dataclass(frozen=True)
@@ -225,7 +230,7 @@ def compare_skill(skill: Skill, candidate_path: Path | None) -> tuple[PromotionR
 def write_report(path: Path, results: list[PromotionResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "repo": str(REPO_ROOT),
         "results": [result.as_json() for result in results],
     }
@@ -233,7 +238,7 @@ def write_report(path: Path, results: list[PromotionResult]) -> None:
 
 
 def record_apply(skill: Skill, candidate_path: Path, diff: str, content: str) -> None:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     record_dir = SKILLOPT_ROOT / "promoted" / stamp / skill.name
     record_dir.mkdir(parents=True, exist_ok=True)
     (record_dir / "metadata.json").write_text(
@@ -242,7 +247,7 @@ def record_apply(skill: Skill, candidate_path: Path, diff: str, content: str) ->
                 "skill": skill.name,
                 "current": str(skill.path),
                 "candidate": str(candidate_path),
-                "applied_at": datetime.now(timezone.utc).isoformat(),
+                "applied_at": datetime.now(UTC).isoformat(),
             },
             indent=2,
             ensure_ascii=False,
@@ -254,6 +259,16 @@ def record_apply(skill: Skill, candidate_path: Path, diff: str, content: str) ->
     (record_dir / "SKILL.md").write_text(content, encoding="utf-8")
 
 
+def run_post_apply_checks() -> int:
+    for cmd in POST_APPLY_CHECKS:
+        print(f"[promote-skills] verify: {' '.join(cmd)}")
+        proc = subprocess.run(cmd, cwd=REPO_ROOT, check=False)
+        if proc.returncode != 0:
+            print(f"[promote-skills] verify failed ({proc.returncode}): {' '.join(cmd)}")
+            return proc.returncode
+    return 0
+
+
 def cmd_inventory(args: argparse.Namespace) -> int:
     for skill in select_skills(args.skill):
         print(skill.name)
@@ -261,7 +276,7 @@ def cmd_inventory(args: argparse.Namespace) -> int:
 
 
 def cmd_stage_current(args: argparse.Namespace) -> int:
-    run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-current")
+    run_id = args.run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-current")
     root = resolve_stage_root(args.out_root, run_id, allow_external=args.allow_external_out_root)
     for skill in select_skills(args.skill):
         dest = root / skill.name / "SKILL.md"
@@ -275,7 +290,9 @@ def cmd_promote(args: argparse.Namespace) -> int:
     roots = [Path(root) for root in (args.candidate_root or [])] or DEFAULT_CANDIDATE_ROOTS
     skills = select_skills(args.skill)
     explicit_candidate = (
-        ensure_safe_candidate(Path(args.candidate), roots, allow_external=args.allow_external_candidate)
+        ensure_safe_candidate(
+            Path(args.candidate), roots, allow_external=args.allow_external_candidate
+        )
         if args.candidate
         else None
     )
@@ -284,6 +301,7 @@ def cmd_promote(args: argparse.Namespace) -> int:
 
     results: list[PromotionResult] = []
     exit_code = 0
+    applied_any = False
     for skill in skills:
         candidate_path = explicit_candidate or newest_candidate(skill.name, roots)
         result, diff = compare_skill(skill, candidate_path)
@@ -306,6 +324,7 @@ def cmd_promote(args: argparse.Namespace) -> int:
             skill.path.write_text(content, encoding="utf-8")
             record_apply(skill, candidate_path, diff, content)
             result.status = "applied"
+            applied_any = True
             print(f"[promote-skills] {skill.name}: applied -> {skill.path}")
 
     if args.report:
@@ -313,6 +332,10 @@ def cmd_promote(args: argparse.Namespace) -> int:
         print(f"[promote-skills] report={args.report}")
     if not args.apply:
         print("[promote-skills] dry-run: production SKILL.md files not changed")
+    if args.apply and applied_any and not args.skip_verify:
+        verify_code = run_post_apply_checks()
+        if verify_code != 0:
+            exit_code = verify_code
     return exit_code
 
 
@@ -321,12 +344,20 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     inventory = sub.add_parser("inventory", help="list current skills")
-    inventory.add_argument("--skill", action="append", default=[], help="limit to one skill; repeatable")
+    inventory.add_argument(
+        "--skill", action="append", default=[], help="limit to one skill; repeatable"
+    )
     inventory.set_defaults(func=cmd_inventory)
 
-    stage = sub.add_parser("stage-current", help="copy current SKILL.md files into an ignored candidate root")
-    stage.add_argument("--skill", action="append", default=[], help="limit to one skill; repeatable")
-    stage.add_argument("--run-id", default="", help="candidate run id under .skillopt/promote-candidates")
+    stage = sub.add_parser(
+        "stage-current", help="copy current SKILL.md files into an ignored candidate root"
+    )
+    stage.add_argument(
+        "--skill", action="append", default=[], help="limit to one skill; repeatable"
+    )
+    stage.add_argument(
+        "--run-id", default="", help="candidate run id under .skillopt/promote-candidates"
+    )
     stage.add_argument("--out-root", default="", help="explicit candidate root")
     stage.add_argument(
         "--allow-external-out-root",
@@ -336,7 +367,9 @@ def build_parser() -> argparse.ArgumentParser:
     stage.set_defaults(func=cmd_stage_current)
 
     promote = sub.add_parser("promote", help="compare or apply skill candidates")
-    promote.add_argument("--skill", action="append", default=[], help="limit to one skill; repeatable")
+    promote.add_argument(
+        "--skill", action="append", default=[], help="limit to one skill; repeatable"
+    )
     promote.add_argument("--candidate", default="", help="explicit candidate for a single --skill")
     promote.add_argument(
         "--candidate-root",
@@ -344,9 +377,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="root to search for candidates; default: .skillopt/promote-candidates and .skillopt/outputs",
     )
-    promote.add_argument("--require-candidates", action="store_true", help="exit 1 when any selected skill lacks a candidate")
+    promote.add_argument(
+        "--require-candidates",
+        action="store_true",
+        help="exit 1 when any selected skill lacks a candidate",
+    )
     promote.add_argument("--report", default="", help="write a JSON report")
-    promote.add_argument("--apply", action="store_true", help="write candidate content into skills/<name>/SKILL.md")
+    promote.add_argument(
+        "--apply", action="store_true", help="write candidate content into skills/<name>/SKILL.md"
+    )
+    promote.add_argument(
+        "--skip-verify",
+        action="store_true",
+        help="skip post-apply catalog and repo validation after a reviewed emergency apply",
+    )
     promote.add_argument(
         "--allow-external-candidate",
         action="store_true",

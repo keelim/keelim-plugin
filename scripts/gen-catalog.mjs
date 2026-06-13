@@ -25,19 +25,116 @@ const SKILL_SOURCE = 'keelim/keelim-plugin';
 /** @typedef {{ folder: string, name: string, description: string, hasCodexMeta: boolean, errors: string[] }} SkillEntry */
 
 /**
+ * @param {string} value
+ * @returns {string | boolean}
+ */
+function parseScalar(value) {
+  const trimmed = value.trim();
+  if (trimmed === 'true' || trimmed === 'True') return true;
+  if (trimmed === 'false' || trimmed === 'False') return false;
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+/**
+ * Parse the small mapping-only YAML subset used by SKILL frontmatter and
+ * agents/openai.yaml. The Python validator uses PyYAML when available; this
+ * keeps the catalog generator dependency-free while still validating content.
+ * @param {string} text
+ * @param {string} source
+ * @returns {Record<string, any>}
+ */
+function parseSimpleYaml(text, source) {
+  const root = {};
+  const stack = [{ indent: -1, value: root }];
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i += 1) {
+    const raw = lines[i];
+    if (!raw.trim() || raw.trimStart().startsWith('#')) continue;
+    if (raw.startsWith('\t')) throw new Error(`${source}:${i + 1}: tabs are not supported`);
+    const indent = raw.length - raw.trimStart().length;
+    const stripped = raw.trim();
+    const colon = stripped.indexOf(':');
+    if (colon < 0) throw new Error(`${source}:${i + 1}: expected key: value`);
+    const key = stripped.slice(0, colon).trim();
+    const rawValue = stripped.slice(colon + 1).trim();
+    if (!key) throw new Error(`${source}:${i + 1}: empty key`);
+    while (stack.length > 0 && indent <= stack[stack.length - 1].indent) stack.pop();
+    if (stack.length === 0) throw new Error(`${source}:${i + 1}: invalid indentation`);
+    const parent = stack[stack.length - 1].value;
+    if (rawValue) {
+      parent[key] = parseScalar(rawValue);
+      continue;
+    }
+    const child = {};
+    parent[key] = child;
+    stack.push({ indent, value: child });
+  }
+  return root;
+}
+
+/**
  * Extract YAML frontmatter name/description from a SKILL.md body.
  * @param {string} text
+ * @param {string} source
  * @returns {{ name: string | null, description: string | null }}
  */
-function parseFrontmatter(text) {
+function parseFrontmatter(text, source) {
   const m = text.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!m) return { name: null, description: null };
-  const block = m[1];
-  const get = (key) => {
-    const r = new RegExp(`^${key}:\\s*(.+)$`, 'm').exec(block);
-    return r ? r[1].trim().replace(/^['"]|['"]$/g, '') : null;
+  const values = parseSimpleYaml(m[1], source);
+  return {
+    name: typeof values.name === 'string' ? values.name : null,
+    description: typeof values.description === 'string' ? values.description : null
   };
-  return { name: get('name'), description: get('description') };
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
+ * @param {string} folder
+ * @returns {string[]}
+ */
+function validateCodexMeta(folder) {
+  const metaPath = join(SKILLS_DIR, folder, 'agents', 'openai.yaml');
+  if (!existsSync(metaPath)) return [];
+  const errors = [];
+  let meta;
+  try {
+    meta = parseSimpleYaml(readFileSync(metaPath, 'utf8'), metaPath);
+  } catch (error) {
+    return [`agents/openai.yaml parse error: ${error.message}`];
+  }
+  if (!meta.interface || typeof meta.interface !== 'object') {
+    return ['agents/openai.yaml missing interface mapping'];
+  }
+  for (const field of ['display_name', 'short_description', 'default_prompt']) {
+    if (!isNonEmptyString(meta.interface[field])) {
+      errors.push(`agents/openai.yaml interface.${field} must be a non-empty string`);
+    }
+  }
+  if (meta.policy !== undefined) {
+    if (!meta.policy || typeof meta.policy !== 'object') {
+      errors.push('agents/openai.yaml policy must be a mapping when present');
+    } else if (
+      meta.policy.allow_implicit_invocation !== undefined &&
+      typeof meta.policy.allow_implicit_invocation !== 'boolean'
+    ) {
+      errors.push('agents/openai.yaml policy.allow_implicit_invocation must be boolean');
+    }
+  }
+  return errors;
 }
 
 /**
@@ -57,12 +154,17 @@ function readSkills() {
     if (!existsSync(skillPath)) {
       errors.push('missing SKILL.md');
     } else {
-      ({ name, description } = parseFrontmatter(readFileSync(skillPath, 'utf8')));
+      try {
+        ({ name, description } = parseFrontmatter(readFileSync(skillPath, 'utf8'), skillPath));
+      } catch (error) {
+        errors.push(`frontmatter parse error: ${error.message}`);
+      }
       if (!name) errors.push('frontmatter missing `name`');
       if (!description) errors.push('frontmatter missing `description`');
       if (name && name !== folder) errors.push(`frontmatter name "${name}" != folder "${folder}"`);
     }
     const hasCodexMeta = existsSync(join(SKILLS_DIR, folder, 'agents', 'openai.yaml'));
+    errors.push(...validateCodexMeta(folder));
     return { folder, name: name || folder, description: description || '', hasCodexMeta, errors };
   });
 }
@@ -134,6 +236,36 @@ function renderMarkdown(skills) {
   return `${lines.join('\n')}\n`;
 }
 
+/**
+ * @returns {string}
+ */
+function catalogGeneratedAt() {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (epoch) {
+    const seconds = Number.parseInt(epoch, 10);
+    if (Number.isFinite(seconds)) return new Date(seconds * 1000).toISOString();
+  }
+  return '1970-01-01T00:00:00.000Z';
+}
+
+/**
+ * @param {SkillEntry[]} skills
+ * @returns {{ generatedAt: string, source: string, count: number, skills: object[] }}
+ */
+function buildCatalogJson(skills) {
+  return {
+    generatedAt: catalogGeneratedAt(),
+    source: SKILL_SOURCE,
+    count: skills.length,
+    skills: skills.map((s) => ({
+      name: s.folder,
+      description: s.description,
+      hasCodexMeta: s.hasCodexMeta,
+      install: installCommands(s)
+    }))
+  };
+}
+
 function main() {
   const check = process.argv.includes('--check');
   const skills = readSkills();
@@ -144,21 +276,10 @@ function main() {
   const missingFolders = [...readmeNames].filter((n) => !folderNames.has(n));
   const metaErrors = skills.filter((s) => s.errors.length > 0);
 
-  // Always write the generated catalog artifacts (additive).
-  const catalogJson = {
-    generatedAt: new Date().toISOString(),
-    source: SKILL_SOURCE,
-    count: skills.length,
-    skills: skills.map((s) => ({
-      name: s.folder,
-      description: s.description,
-      hasCodexMeta: s.hasCodexMeta,
-      install: installCommands(s)
-    }))
-  };
-  writeFileSync(join(REPO_ROOT, 'catalog.json'), `${JSON.stringify(catalogJson, null, 2)}\n`, 'utf8');
-  writeFileSync(join(REPO_ROOT, 'CATALOG.md'), renderMarkdown(skills), 'utf8');
-  console.log(`[gen-catalog] ${skills.length} skills -> CATALOG.md, catalog.json`);
+  const catalogJsonText = `${JSON.stringify(buildCatalogJson(skills), null, 2)}\n`;
+  const catalogMarkdown = renderMarkdown(skills);
+  const catalogJsonPath = join(REPO_ROOT, 'catalog.json');
+  const catalogMarkdownPath = join(REPO_ROOT, 'CATALOG.md');
 
   if (check) {
     let failed = false;
@@ -174,9 +295,22 @@ function main() {
       console.error(`[gen-catalog] META: ${s.folder}: ${s.errors.join('; ')}`);
       failed = true;
     }
+    if (!existsSync(catalogJsonPath) || readFileSync(catalogJsonPath, 'utf8') !== catalogJsonText) {
+      console.error('[gen-catalog] DRIFT: catalog.json is not up to date');
+      failed = true;
+    }
+    if (!existsSync(catalogMarkdownPath) || readFileSync(catalogMarkdownPath, 'utf8') !== catalogMarkdown) {
+      console.error('[gen-catalog] DRIFT: CATALOG.md is not up to date');
+      failed = true;
+    }
     if (failed) process.exit(1);
-    console.log('[gen-catalog] --check OK (README parity + metadata valid)');
+    console.log('[gen-catalog] --check OK (README parity + metadata + generated files valid)');
+    return;
   }
+
+  writeFileSync(catalogJsonPath, catalogJsonText, 'utf8');
+  writeFileSync(catalogMarkdownPath, catalogMarkdown, 'utf8');
+  console.log(`[gen-catalog] ${skills.length} skills -> CATALOG.md, catalog.json`);
 }
 
 main();

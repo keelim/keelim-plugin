@@ -4,14 +4,15 @@ set -euo pipefail
 PHASE="${1:-post}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SKILL_ROOT}/../.." && pwd)"
+UV_CACHE="${KEELIM_PLUGIN_UV_CACHE:-${REPO_ROOT}/.skillopt/uv-cache}"
 
-if command -v python3 >/dev/null 2>&1; then
-  PYTHON_BIN="python3"
-elif command -v python >/dev/null 2>&1; then
-  PYTHON_BIN="python"
-else
-  echo "[session-learning] No python interpreter found; skipping observation" >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "[session-learning] uv not found; skipping observation" >&2
   exit 0
 fi
 
-"${PYTHON_BIN}" "${SKILL_ROOT}/scripts/learning_observer.py" --phase "${PHASE}"
+if ! uv --cache-dir "${UV_CACHE}" run --python 3.12 python "${SKILL_ROOT}/scripts/learning_observer.py" --phase "${PHASE}"; then
+  echo "[session-learning] uv observer run failed; skipping observation" >&2
+  exit 0
+fi

@@ -1,0 +1,28 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev ruff check scripts
+        language: system
+        pass_filenames: false
+      - id: ruff-format-check
+        name: ruff format check
+        entry: uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev ruff format --check scripts
+        language: system
+        pass_filenames: false
+      - id: mypy
+        name: mypy
+        entry: uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev mypy
+        language: system
+        pass_filenames: false
+      - id: verify-skills
+        name: verify skills
+        entry: bash scripts/verify-skills.sh --require-codex-meta
+        language: system
+        pass_filenames: false
+      - id: gen-catalog-check
+        name: catalog check
+        entry: node scripts/gen-catalog.mjs --check
+        language: system
+        pass_filenames: false

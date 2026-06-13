@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import difflib
-import glob
 import json
 import os
 import re
@@ -14,10 +12,9 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = REPO_ROOT / "skills"
@@ -43,6 +40,7 @@ CODEX_OPTIMIZER_OUTPUT_ROOT = OUTPUT_ROOT / "codex-optimizer"
 QUICK_VALIDATE_ENV = "KEELIM_PLUGIN_QUICK_VALIDATE"
 TRUST_CODEX_EXEC_ENV = "KEELIM_PLUGIN_TRUST_CODEX_EXEC"
 EXPECTED_SKILLOPT_REV = "ee9931ec017cd8d9ce7caab272983e268258ddf5"
+SUBPROCESS_TIMEOUT_ENV = "KEELIM_PLUGIN_SUBPROCESS_TIMEOUT_SECONDS"
 
 BANNED_ENV_KEYS = {
     "ANTHROPIC_API_KEY",
@@ -104,6 +102,17 @@ def eprint(message: str) -> None:
     print(message, file=sys.stderr)
 
 
+def default_subprocess_timeout() -> int:
+    raw = os.environ.get(SUBPROCESS_TIMEOUT_ENV, "1800")
+    try:
+        value = int(raw)
+    except ValueError:
+        raise SystemExit(f"{SUBPROCESS_TIMEOUT_ENV} must be an integer number of seconds") from None
+    if value <= 0:
+        raise SystemExit(f"{SUBPROCESS_TIMEOUT_ENV} must be greater than zero")
+    return value
+
+
 def run(
     cmd: list[str],
     *,
@@ -111,15 +120,25 @@ def run(
     env: dict[str, str] | None = None,
     check: bool = True,
     capture: bool = False,
+    timeout: int | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(
-        cmd,
-        cwd=cwd,
-        env=env,
-        text=True,
-        capture_output=capture,
-        check=False,
-    )
+    timeout_seconds = timeout or default_subprocess_timeout()
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            env=env,
+            text=True,
+            capture_output=capture,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if exc.stdout:
+            eprint(str(exc.stdout).rstrip())
+        if exc.stderr:
+            eprint(str(exc.stderr).rstrip())
+        raise SystemExit(f"command timed out after {timeout_seconds}s: {' '.join(cmd)}") from exc
     if check and proc.returncode != 0:
         if capture:
             if proc.stdout:
@@ -165,8 +184,20 @@ def quick_validate_path() -> Path | None:
         candidates.append(Path(configured).expanduser())
     candidates.extend(
         [
-            Path.home() / ".codex" / "skills" / ".system" / "skill-creator" / "scripts" / "quick_validate.py",
-            Path.home() / ".agents" / "skills" / ".system" / "skill-creator" / "scripts" / "quick_validate.py",
+            Path.home()
+            / ".codex"
+            / "skills"
+            / ".system"
+            / "skill-creator"
+            / "scripts"
+            / "quick_validate.py",
+            Path.home()
+            / ".agents"
+            / "skills"
+            / ".system"
+            / "skill-creator"
+            / "scripts"
+            / "quick_validate.py",
         ]
     )
     return next((path for path in candidates if path.is_file()), None)
@@ -250,7 +281,7 @@ def skill_names() -> list[str]:
 
 def select_skill_names(raw: str | None) -> list[str]:
     names = skill_names()
-    if raw in (None, "", "all"):
+    if raw is None or raw in ("", "all"):
         return names
     requested = [item.strip() for item in raw.split(",") if item.strip()]
     missing = [item for item in requested if item not in names]
@@ -290,7 +321,9 @@ def resource_inventory(skill: SkillInfo) -> str:
     lines = []
     for dirname in skill.resource_dirs:
         root = SKILLS_DIR / skill.name / dirname
-        files = sorted(path.relative_to(SKILLS_DIR / skill.name) for path in root.rglob("*") if path.is_file())
+        files = sorted(
+            path.relative_to(SKILLS_DIR / skill.name) for path in root.rglob("*") if path.is_file()
+        )
         preview = ", ".join(str(path) for path in files[:8])
         if len(files) > 8:
             preview += f", ... ({len(files)} files)"
@@ -448,7 +481,7 @@ def output_root_for(skill_name: str, run_id: str) -> Path:
 
 
 def current_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("codex-tiny-%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("codex-tiny-%Y%m%dT%H%M%SZ")
 
 
 def write_skill_data(skill: SkillInfo, *, dry_run: bool = False) -> None:
@@ -507,7 +540,11 @@ def insert_optimizer_dispatch(text: str, *, function_name: str, marker: str, cal
     except SyntaxError as exc:
         raise RuntimeError(f"cannot parse SkillOpt __init__.py: {exc}") from exc
     target = next(
-        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == function_name),
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == function_name
+        ),
         None,
     )
     if target is None:
@@ -550,7 +587,9 @@ def copy_overlay() -> None:
 def verify_skillopt_revision() -> None:
     if not SKILLOPT_CHECKOUT.exists():
         return
-    proc = run(["git", "-C", str(SKILLOPT_CHECKOUT), "rev-parse", "HEAD"], capture=True, check=False)
+    proc = run(
+        ["git", "-C", str(SKILLOPT_CHECKOUT), "rev-parse", "HEAD"], capture=True, check=False
+    )
     current = proc.stdout.strip() if proc.returncode == 0 else ""
     expected = os.environ.get("SKILLOPT_EXPECTED_REV", EXPECTED_SKILLOPT_REV)
     if current != expected:
@@ -639,15 +678,15 @@ def patch_skillopt_checkout() -> None:
             (
                 "codex_summary = _codex_optimizer.get_token_summary()\n"
                 "    for stage, values in codex_summary.items():\n"
-                "        if stage == \"_total\":\n"
+                '        if stage == "_total":\n'
                 "            continue\n"
                 "        if stage not in summary:\n"
                 "            summary[stage] = values\n"
                 "            continue\n"
-                "        summary[stage][\"calls\"] += values[\"calls\"]\n"
-                "        summary[stage][\"prompt_tokens\"] += values[\"prompt_tokens\"]\n"
-                "        summary[stage][\"completion_tokens\"] += values[\"completion_tokens\"]\n"
-                "        summary[stage][\"total_tokens\"] += values[\"total_tokens\"]\n"
+                '        summary[stage]["calls"] += values["calls"]\n'
+                '        summary[stage]["prompt_tokens"] += values["prompt_tokens"]\n'
+                '        summary[stage]["completion_tokens"] += values["completion_tokens"]\n'
+                '        summary[stage]["total_tokens"] += values["total_tokens"]\n'
                 "    minimax_summary = _minimax.get_token_summary()"
             ),
             "_codex_optimizer.get_token_summary()",
@@ -684,14 +723,14 @@ def patch_skillopt_checkout() -> None:
         anchor = (
             "    try:\n"
             "        from skillopt.envs.agent_instructions_improver.adapter import AgentInstructionsImproverAdapter\n"
-            "        _ENV_REGISTRY[\"agent_instructions_improver\"] = AgentInstructionsImproverAdapter\n"
+            '        _ENV_REGISTRY["agent_instructions_improver"] = AgentInstructionsImproverAdapter\n'
             "    except ImportError:\n"
             "        pass\n"
         )
         insert = anchor + (
             "    try:\n"
             "        from skillopt.envs.plugin_skill_improver.adapter import PluginSkillImproverAdapter\n"
-            "        _ENV_REGISTRY[\"plugin_skill_improver\"] = PluginSkillImproverAdapter\n"
+            '        _ENV_REGISTRY["plugin_skill_improver"] = PluginSkillImproverAdapter\n'
             "    except ImportError:\n"
             "        pass\n"
         )
@@ -699,14 +738,14 @@ def patch_skillopt_checkout() -> None:
             searchqa_anchor = (
                 "    try:\n"
                 "        from skillopt.envs.searchqa.adapter import SearchQAAdapter\n"
-                "        _ENV_REGISTRY[\"searchqa\"] = SearchQAAdapter\n"
+                '        _ENV_REGISTRY["searchqa"] = SearchQAAdapter\n'
                 "    except ImportError:\n"
                 "        pass\n"
             )
             insert = searchqa_anchor + (
                 "    try:\n"
                 "        from skillopt.envs.plugin_skill_improver.adapter import PluginSkillImproverAdapter\n"
-                "        _ENV_REGISTRY[\"plugin_skill_improver\"] = PluginSkillImproverAdapter\n"
+                '        _ENV_REGISTRY["plugin_skill_improver"] = PluginSkillImproverAdapter\n'
                 "    except ImportError:\n"
                 "        pass\n"
             )
@@ -761,7 +800,11 @@ def ensure_prepared_for_train() -> None:
 
 def train_command(skill_name: str, args: argparse.Namespace, run_id: str) -> list[str]:
     skill_data = data_dir_for(skill_name)
-    out_root = (Path(args.out_root) / skill_name / run_id) if args.out_root else output_root_for(skill_name, run_id)
+    out_root = (
+        (Path(args.out_root) / skill_name / run_id)
+        if args.out_root
+        else output_root_for(skill_name, run_id)
+    )
     return uv_python_cmd(
         "scripts/train.py",
         "--config",
@@ -795,7 +838,9 @@ def train_command(skill_name: str, args: argparse.Namespace, run_id: str) -> lis
 
 def resolve_latest_run(skill_name: str) -> Path | None:
     root = OUTPUT_ROOT / skill_name
-    candidates = [path for path in root.glob("*") if path.is_dir() and (path / "summary.json").exists()]
+    candidates = [
+        path for path in root.glob("*") if path.is_dir() and (path / "summary.json").exists()
+    ]
     if not candidates:
         return None
     return sorted(candidates, key=lambda path: path.stat().st_mtime, reverse=True)[0]
@@ -943,7 +988,7 @@ def run_validators() -> int:
 def write_report(path: Path, results: list[GateResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "repo": str(REPO_ROOT),
         "results": [result.as_json() for result in results],
     }
@@ -954,7 +999,11 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     check_codex()
     check_uv()
     UV_CACHE.mkdir(parents=True, exist_ok=True)
-    proc = run(["uv", "--cache-dir", str(UV_CACHE), "python", "list", "--only-installed"], capture=True, check=False)
+    proc = run(
+        ["uv", "--cache-dir", str(UV_CACHE), "python", "list", "--only-installed"],
+        capture=True,
+        check=False,
+    )
     if proc.returncode == 0:
         found = any(line.split()[0].startswith("cpython-3.12") for line in proc.stdout.splitlines())
         print(f"[prepare] python-3.12={'installed' if found else 'not-installed-yet'}")
@@ -963,7 +1012,16 @@ def cmd_prepare(args: argparse.Namespace) -> int:
         return 0
     SKILLOPT_ROOT.mkdir(parents=True, exist_ok=True)
     if not SKILLOPT_CHECKOUT.exists():
-        run(["git", "clone", "--depth", "1", "https://github.com/microsoft/SkillOpt.git", str(SKILLOPT_CHECKOUT)])
+        run(
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/microsoft/SkillOpt.git",
+                str(SKILLOPT_CHECKOUT),
+            ]
+        )
     else:
         print(f"[prepare] using existing checkout: {SKILLOPT_CHECKOUT}")
     verify_skillopt_revision()
@@ -1002,9 +1060,21 @@ def cmd_train_codex(args: argparse.Namespace) -> int:
     ensure_prepared_for_train()
     if not data_is_ready(skill.name):
         write_skill_data(skill)
-    proc = run(cmd, cwd=SKILLOPT_CHECKOUT, env=codex_only_env(), check=False)
-    run_root = (Path(args.out_root) / skill.name / run_id) if args.out_root else output_root_for(skill.name, run_id)
-    inspect_code, tracebacks = summarize_run(run_root, show_first_traceback=args.show_first_traceback)
+    proc = run(
+        cmd,
+        cwd=SKILLOPT_CHECKOUT,
+        env=codex_only_env(),
+        check=False,
+        timeout=args.timeout_seconds or None,
+    )
+    run_root = (
+        (Path(args.out_root) / skill.name / run_id)
+        if args.out_root
+        else output_root_for(skill.name, run_id)
+    )
+    inspect_code, tracebacks = summarize_run(
+        run_root, show_first_traceback=args.show_first_traceback
+    )
     if proc.returncode != 0:
         return proc.returncode
     if inspect_code != 0:
@@ -1073,7 +1143,11 @@ def cmd_run_all(args: argparse.Namespace) -> int:
         train_args.allow_readonly_codex_home = True
         print(f"[run-all] training {name}")
         train_code = cmd_train_codex(train_args)
-        run_root = (Path(args.out_root) / name / run_id) if args.out_root else output_root_for(name, run_id)
+        run_root = (
+            (Path(args.out_root) / name / run_id)
+            if args.out_root
+            else output_root_for(name, run_id)
+        )
         if train_code != 0:
             result = GateResult(name, "train-failed", None, [f"train exit {train_code}"])
             results.append(result)
@@ -1112,6 +1186,12 @@ def add_train_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-id", default="")
     parser.add_argument("--allow-readonly-codex-home", action="store_true")
     parser.add_argument("--show-first-traceback", action="store_true")
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=0,
+        help=f"override {SUBPROCESS_TIMEOUT_ENV} for each external command",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:

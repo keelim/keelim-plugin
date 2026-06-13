@@ -22,6 +22,38 @@ A personal skill collection for both Codex and Claude.
 - `session-usage-dashboard`: a Codex/Claude session analyzer that renders offline HTML and JSON usage dashboards for tools, skills, and subagents
 - `tech-post-maker`: a writing skill for first-person technical posts in a calm personal engineer voice, especially build logs, case studies, workflow write-ups, and series posts
 
+## Repo-local validation
+
+Run the CI-equivalent local check before promoting skill, eval, or tooling
+changes:
+
+```bash
+bash scripts/check.sh
+```
+
+The check verifies `uv.lock`, runs ruff, checks formatting, runs mypy, executes
+the bundled Python tests, validates skill metadata, checks generated catalog
+drift, and finishes with `git diff --check`.
+
+Install or refresh the pinned development tools with:
+
+```bash
+uv --cache-dir .skillopt/uv-cache sync --python 3.12 --group dev
+```
+
+All local Python entrypoints in this repo should be run through `uv`:
+
+```bash
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python <script> ...
+```
+
+The repo-local uv cache is intentionally ignored. To inspect or prune it:
+
+```bash
+du -sh .skillopt/uv-cache
+uv --cache-dir .skillopt/uv-cache cache prune
+```
+
 ## Promote skills
 
 Use `scripts/promote_plugin_skills.py` to route every plugin skill through the
@@ -30,30 +62,24 @@ candidate `SKILL.md` files or SkillOpt `best_skill.md` artifacts against the
 current `skills/<name>/SKILL.md`, preserves frontmatter when needed, and applies
 only when `--apply` is passed.
 
-All local Python entrypoints in this repo should be run through `uv`:
-
-```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python <script> ...
-```
-
 List the skills in scope:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py inventory
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py inventory
 ```
 
 Compare all available candidates without modifying production skills:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py promote
 ```
 
 For an end-to-end no-op smoke pass across every skill, stage the current skill
 files into ignored candidate storage and require one candidate per skill:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py stage-current --run-id all-skills-smoke
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py stage-current --run-id all-skills-smoke
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py promote \
   --candidate-root .skillopt/promote-candidates/all-skills-smoke \
   --require-candidates
 ```
@@ -61,11 +87,11 @@ uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugi
 Promote one reviewed candidate after inspecting the diff:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py promote \
   --skill tech-post-maker \
   --candidate /path/to/reviewed/SKILL.md
 
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/promote_plugin_skills.py promote \
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/promote_plugin_skills.py promote \
   --skill tech-post-maker \
   --candidate /path/to/reviewed/SKILL.md \
   --apply
@@ -75,19 +101,6 @@ SkillOpt-generated candidates are picked up automatically from
 `.skillopt/outputs/<skill>/**/best_skill.md`. Keep `.skillopt/` ignored; it may
 contain model traces, split data, reports, and smoke candidates.
 
-## Repo-local validation
-
-Run the local script, skill, and eval checks before promoting skill or eval
-changes:
-
-```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/run-tests.py
-```
-
-The runner compiles repo Python entrypoints, executes bundled stdlib tests,
-checks local skill metadata, refreshes the generated catalog in check mode, and
-runs `git diff --check`.
-
 ## Codex-only SkillOpt
 
 Use `scripts/skillopt_plugin_skills.py` for the 8-skill Codex-only tiny pilot.
@@ -96,11 +109,11 @@ optimizer overlay plus upstream `codex_exec` target evaluation, and applies only
 the candidates that pass deterministic promotion gates.
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py prepare --check
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py curate --skill all --dry-run
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py run-all --dry-run
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py run-all --apply-passing --num-epochs 1 --batch-size 4 --workers 1 --max-steps 1
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python scripts/skillopt_plugin_skills.py inspect-all --fail-on-tracebacks
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/skillopt_plugin_skills.py prepare --check
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/skillopt_plugin_skills.py curate --skill all --dry-run
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/skillopt_plugin_skills.py run-all --dry-run
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/skillopt_plugin_skills.py run-all --apply-passing --num-epochs 1 --batch-size 4 --workers 1 --max-steps 1
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/skillopt_plugin_skills.py inspect-all --fail-on-tracebacks
 ```
 
 ## Install with the Vercel skills CLI
@@ -129,14 +142,14 @@ This installs the skill into:
 For `session-learning`, preview and apply project-scoped hook registration after installing the skill:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py --apply
 ```
 
 To install `session-learning` hooks globally for every project:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
 ```
 
 If you prefer the full GitHub URL form, this also works:

@@ -16,7 +16,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 POC_DIR = REPO_ROOT / "evals" / "skillopt" / "agent-instructions-improver"
 OVERLAY_DIR = POC_DIR / "overlays"
@@ -114,9 +113,7 @@ def score_response(response: str, expected: dict[str, Any]) -> dict[str, Any]:
     normalized = normalize_text(response)
     must_find = [str(item) for item in expected.get("must_find", [])]
     forbidden = [
-        str(item)
-        for group in ("must_not_claim", "must_not_do")
-        for item in expected.get(group, [])
+        str(item) for group in ("must_not_claim", "must_not_do") for item in expected.get(group, [])
     ]
     found = [item for item in must_find if normalize_text(item) in normalized]
     missing = [item for item in must_find if item not in found]
@@ -245,7 +242,10 @@ def default_examples() -> list[dict[str, Any]]:
 
 def observations_paths() -> list[Path]:
     candidates = [REPO_ROOT / ".omx" / "learning" / "observations.jsonl"]
-    candidates.extend(Path(path) for path in glob.glob(str(REPO_ROOT / ".omx" / "learning" / "observations*.jsonl")))
+    candidates.extend(
+        Path(path)
+        for path in glob.glob(str(REPO_ROOT / ".omx" / "learning" / "observations*.jsonl"))
+    )
     return sorted({path for path in candidates if path.exists()})
 
 
@@ -307,7 +307,10 @@ def curated_from_observations(limit: int) -> tuple[list[dict[str, Any]], int, li
                         "context, and avoid inventing repository facts."
                     ),
                     "expected": {
-                        "must_find": ["evidence", "AGENTS.md" if "AGENTS.md" in keys else "instruction"],
+                        "must_find": [
+                            "evidence",
+                            "AGENTS.md" if "AGENTS.md" in keys else "instruction",
+                        ],
                         "must_not_claim": [
                             "Claude is required",
                             "OpenAI API key is required",
@@ -505,7 +508,11 @@ def insert_optimizer_dispatch(
     except SyntaxError as exc:
         raise RuntimeError(f"cannot parse SkillOpt __init__.py: {exc}") from exc
     target = next(
-        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == function_name),
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == function_name
+        ),
         None,
     )
     if target is None:
@@ -561,10 +568,15 @@ def patch_skillopt_checkout() -> None:
 
     backend = backend_path.read_text(encoding="utf-8")
     optimizer_set = '{"openai_chat", "claude_chat", "qwen_chat", "minimax_chat"}'
-    optimizer_set_codex = '{"openai_chat", "claude_chat", "qwen_chat", "minimax_chat", "codex_chat"}'
+    optimizer_set_codex = (
+        '{"openai_chat", "claude_chat", "qwen_chat", "minimax_chat", "codex_chat"}'
+    )
     if optimizer_set in backend:
         backend = backend.replace(optimizer_set, optimizer_set_codex)
-    if "Supported values are 'openai_chat', 'claude_chat', 'qwen_chat', and 'minimax_chat'." in backend:
+    if (
+        "Supported values are 'openai_chat', 'claude_chat', 'qwen_chat', and 'minimax_chat'."
+        in backend
+    ):
         backend = backend.replace(
             "Supported values are 'openai_chat', 'claude_chat', 'qwen_chat', and 'minimax_chat'.",
             "Supported values are 'openai_chat', 'claude_chat', 'qwen_chat', 'minimax_chat', and 'codex_chat'.",
@@ -607,15 +619,15 @@ def patch_skillopt_checkout() -> None:
             (
                 "codex_summary = _codex_optimizer.get_token_summary()\n"
                 "    for stage, values in codex_summary.items():\n"
-                "        if stage == \"_total\":\n"
+                '        if stage == "_total":\n'
                 "            continue\n"
                 "        if stage not in summary:\n"
                 "            summary[stage] = values\n"
                 "            continue\n"
-                "        summary[stage][\"calls\"] += values[\"calls\"]\n"
-                "        summary[stage][\"prompt_tokens\"] += values[\"prompt_tokens\"]\n"
-                "        summary[stage][\"completion_tokens\"] += values[\"completion_tokens\"]\n"
-                "        summary[stage][\"total_tokens\"] += values[\"total_tokens\"]\n"
+                '        summary[stage]["calls"] += values["calls"]\n'
+                '        summary[stage]["prompt_tokens"] += values["prompt_tokens"]\n'
+                '        summary[stage]["completion_tokens"] += values["completion_tokens"]\n'
+                '        summary[stage]["total_tokens"] += values["total_tokens"]\n'
                 "    minimax_summary = _minimax.get_token_summary()"
             ),
             "_codex_optimizer.get_token_summary()",
@@ -655,14 +667,14 @@ def patch_skillopt_checkout() -> None:
         anchor = (
             "    try:\n"
             "        from skillopt.envs.searchqa.adapter import SearchQAAdapter\n"
-            "        _ENV_REGISTRY[\"searchqa\"] = SearchQAAdapter\n"
+            '        _ENV_REGISTRY["searchqa"] = SearchQAAdapter\n'
             "    except ImportError:\n"
             "        pass\n"
         )
         insert = anchor + (
             "    try:\n"
             "        from skillopt.envs.agent_instructions_improver.adapter import AgentInstructionsImproverAdapter\n"
-            "        _ENV_REGISTRY[\"agent_instructions_improver\"] = AgentInstructionsImproverAdapter\n"
+            '        _ENV_REGISTRY["agent_instructions_improver"] = AgentInstructionsImproverAdapter\n'
             "    except ImportError:\n"
             "        pass\n"
         )
@@ -684,7 +696,16 @@ def cmd_prepare(args: argparse.Namespace) -> int:
 
     SKILLOPT_ROOT.mkdir(parents=True, exist_ok=True)
     if not SKILLOPT_CHECKOUT.exists():
-        run(["git", "clone", "--depth", "1", "https://github.com/microsoft/SkillOpt.git", str(SKILLOPT_CHECKOUT)])
+        run(
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/microsoft/SkillOpt.git",
+                str(SKILLOPT_CHECKOUT),
+            ]
+        )
     else:
         print(f"[prepare] using existing checkout: {SKILLOPT_CHECKOUT}")
     if args.reinstall:
@@ -774,9 +795,7 @@ def resolve_run_root(raw_path: str = "") -> Path | None:
     if raw_path:
         return Path(raw_path)
     candidates = [
-        path
-        for path in OUTPUT_ROOT.glob("*")
-        if path.is_dir() and (path / "summary.json").exists()
+        path for path in OUTPUT_ROOT.glob("*") if path.is_dir() and (path / "summary.json").exists()
     ]
     if not candidates:
         return None
@@ -938,7 +957,10 @@ def cmd_promote(args: argparse.Namespace) -> int:
     if candidate_frontmatter:
         values = frontmatter_values(candidate_frontmatter)
         if values.get("name") != "agent-instructions-improver":
-            print(f"[promote] candidate frontmatter name mismatch: {values.get('name')!r}", file=sys.stderr)
+            print(
+                f"[promote] candidate frontmatter name mismatch: {values.get('name')!r}",
+                file=sys.stderr,
+            )
             return 1
     candidate = preserve_current_frontmatter(current, candidate_raw)
     diff = difflib.unified_diff(
@@ -971,8 +993,12 @@ def build_parser() -> argparse.ArgumentParser:
     curate.set_defaults(func=cmd_curate)
 
     prepare = sub.add_parser("prepare", help="prepare local SkillOpt checkout")
-    prepare.add_argument("--check", action="store_true", help="check tools without cloning/installing")
-    prepare.add_argument("--reinstall", action="store_true", help="legacy no-op; kept for old command lines")
+    prepare.add_argument(
+        "--check", action="store_true", help="check tools without cloning/installing"
+    )
+    prepare.add_argument(
+        "--reinstall", action="store_true", help="legacy no-op; kept for old command lines"
+    )
     prepare.set_defaults(func=cmd_prepare)
 
     train = sub.add_parser("train-codex", help="run the Codex-only pilot")
@@ -990,11 +1016,15 @@ def build_parser() -> argparse.ArgumentParser:
     train.set_defaults(func=cmd_train_codex)
 
     doctor = sub.add_parser("doctor-codex", help="check local Codex CLI live-run readiness")
-    doctor.add_argument("--strict", action="store_true", help="exit 1 when Codex state is not writable")
+    doctor.add_argument(
+        "--strict", action="store_true", help="exit 1 when Codex state is not writable"
+    )
     doctor.set_defaults(func=cmd_doctor_codex)
 
     inspect = sub.add_parser("inspect-run", help="summarize a SkillOpt run output directory")
-    inspect.add_argument("--run-root", default="", help="default: newest .skillopt run with summary.json")
+    inspect.add_argument(
+        "--run-root", default="", help="default: newest .skillopt run with summary.json"
+    )
     inspect.add_argument("--fail-on-tracebacks", action="store_true")
     inspect.add_argument("--show-first-traceback", action="store_true")
     inspect.set_defaults(func=cmd_inspect_run)

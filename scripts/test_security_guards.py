@@ -11,7 +11,6 @@ import unittest
 from pathlib import Path
 from types import ModuleType
 
-
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent
 
@@ -27,7 +26,9 @@ def load_module(name: str, path: Path) -> ModuleType:
 
 
 promote = load_module("promote_plugin_skills", SCRIPTS_DIR / "promote_plugin_skills.py")
-agent_runner = load_module("skillopt_agent_instructions", SCRIPTS_DIR / "skillopt_agent_instructions.py")
+agent_runner = load_module(
+    "skillopt_agent_instructions", SCRIPTS_DIR / "skillopt_agent_instructions.py"
+)
 plugin_runner = load_module("skillopt_plugin_skills", SCRIPTS_DIR / "skillopt_plugin_skills.py")
 
 
@@ -37,10 +38,15 @@ class PromoteSecurityTests(unittest.TestCase):
             root = Path(tmp)
             candidate_root = root / "allowed"
             outside = root / "outside.md"
-            outside.write_text("---\nname: tech-post-maker\ndescription: x\n---\n\nbody\n", encoding="utf-8")
+            outside.write_text(
+                "---\nname: tech-post-maker\ndescription: x\n---\n\nbody\n", encoding="utf-8"
+            )
             with self.assertRaises(SystemExit):
                 promote.ensure_safe_candidate(outside, [candidate_root], allow_external=False)
-            self.assertEqual(promote.ensure_safe_candidate(outside, [candidate_root], allow_external=True), outside.resolve())
+            self.assertEqual(
+                promote.ensure_safe_candidate(outside, [candidate_root], allow_external=True),
+                outside.resolve(),
+            )
 
     def test_stage_root_must_stay_under_promote_candidates_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -81,7 +87,9 @@ class SkillOptSecurityTests(unittest.TestCase):
             os.environ.update(original)
 
     def test_plugin_runner_verifies_pinned_skillopt_revision(self) -> None:
-        self.assertEqual(plugin_runner.EXPECTED_SKILLOPT_REV, "ee9931ec017cd8d9ce7caab272983e268258ddf5")
+        self.assertEqual(
+            plugin_runner.EXPECTED_SKILLOPT_REV, "ee9931ec017cd8d9ce7caab272983e268258ddf5"
+        )
 
 
 if __name__ == "__main__":
