@@ -204,14 +204,18 @@ def quick_validate_path() -> Path | None:
 
 
 def ensure_tool(name: str) -> str:
-    if ("/" in name or name != "codex") and os.environ.get(TRUST_CODEX_EXEC_ENV) != "1":
-        raise SystemExit(
-            f"custom CODEX_EXEC_PATH requires {TRUST_CODEX_EXEC_ENV}=1 after reviewing the executable: {name}"
-        )
     path = shutil.which(name)
     if not path:
         raise SystemExit(f"required tool not found on PATH: {name}")
     return path
+
+
+def ensure_codex_exec(name: str) -> str:
+    if ("/" in name or name != "codex") and os.environ.get(TRUST_CODEX_EXEC_ENV) != "1":
+        raise SystemExit(
+            f"custom CODEX_EXEC_PATH requires {TRUST_CODEX_EXEC_ENV}=1 after reviewing the executable: {name}"
+        )
+    return ensure_tool(name)
 
 
 def check_uv(prefix: str = "[prepare]") -> None:
@@ -221,7 +225,7 @@ def check_uv(prefix: str = "[prepare]") -> None:
 
 
 def check_codex(prefix: str = "[prepare]") -> None:
-    ensure_tool(os.environ.get("CODEX_EXEC_PATH", "codex"))
+    ensure_codex_exec(os.environ.get("CODEX_EXEC_PATH", "codex"))
     proc = run([os.environ.get("CODEX_EXEC_PATH", "codex"), "--version"], capture=True)
     version = (proc.stdout or proc.stderr).strip().splitlines()[0]
     print(f"{prefix} codex={version}")
