@@ -1,6 +1,13 @@
 ---
 name: jira-ticket-desk
 description: Read Jira tickets through Atlassian MCP, merge local handling rules for intentionally ignored or deferred work, optionally consult Lazyweb for desktop dashboard design references, and render a secure offline pure HTML personal ticket desk from a reusable template plus replaceable JSON data. Use when the user wants to review, triage, plan, or report on Jira tickets without mutating Jira.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: true
+  external_write: false
+  credentials: true
+  hooks: false
 ---
 
 # Jira Ticket Desk

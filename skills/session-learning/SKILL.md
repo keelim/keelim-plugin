@@ -1,6 +1,13 @@
 ---
 name: session-learning
 description: Capture session observations through opt-in hooks, inspect recent Codex or Claude sessions for repeated workflows, and promote stable lessons into AGENTS.md, README.md, skills, custom subagent recommendations, or docs without letting hooks mutate canonical project files directly.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: true
 ---
 
 # Session Learning

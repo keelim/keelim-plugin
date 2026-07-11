@@ -1,6 +1,13 @@
 ---
 name: release-automation
 description: Use when preparing a date-based Android release in a repo that has gradle/libs.versions.toml with versionCode, a develop-to-main release flow, and .github/workflows/app_deploy.yml. Covers dry-run inspection, explicit-confirmation updates, release PR alignment, and app_deploy dispatch.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: true
+  external_write: true
+  credentials: true
+  hooks: false
 ---
 
 # Release Automation

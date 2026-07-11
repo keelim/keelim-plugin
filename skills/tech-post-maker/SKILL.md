@@ -1,6 +1,13 @@
 ---
 name: tech-post-maker
 description: Use when writing first-person technical posts in a personal engineer voice, especially build logs, case studies, workflow write-ups, or series posts about tools, systems, and engineering habits.
+capabilities:
+  read_only: true
+  local_write: false
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: false
 ---
 
 # Tech Post Maker

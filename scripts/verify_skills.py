@@ -12,6 +12,14 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = REPO_ROOT / "skills"
 README = REPO_ROOT / "README.md"
+CAPABILITY_FIELDS = (
+    "read_only",
+    "local_write",
+    "network_read",
+    "external_write",
+    "credentials",
+    "hooks",
+)
 
 
 def parse_scalar(value: str) -> Any:
@@ -114,6 +122,32 @@ def validate_codex_meta(skill_dir: Path) -> list[str]:
             allow_implicit = policy.get("allow_implicit_invocation")
             if allow_implicit is not None and not isinstance(allow_implicit, bool):
                 errors.append("agents/openai.yaml policy.allow_implicit_invocation must be boolean")
+    return errors
+
+
+def validate_capabilities(frontmatter: dict[str, Any]) -> list[str]:
+    capabilities = frontmatter.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return ["frontmatter capabilities must be a mapping"]
+
+    errors: list[str] = []
+    unknown = sorted(set(capabilities) - set(CAPABILITY_FIELDS))
+    if unknown:
+        errors.append("frontmatter capabilities has unknown fields: " + ", ".join(unknown))
+    for field in CAPABILITY_FIELDS:
+        if not isinstance(capabilities.get(field), bool):
+            errors.append(f"frontmatter capabilities.{field} must be boolean")
+
+    if capabilities.get("read_only") is True:
+        conflicting = [
+            field
+            for field in ("local_write", "external_write", "hooks")
+            if capabilities.get(field) is True
+        ]
+        if conflicting:
+            errors.append(
+                "frontmatter capabilities.read_only conflicts with: " + ", ".join(conflicting)
+            )
     return errors
 
 
@@ -255,6 +289,7 @@ def validate_skill(
         errors.append(f"frontmatter name {fm_name!r} != folder")
     if not isinstance(description, str) or not description.strip():
         errors.append("frontmatter missing description")
+    errors.extend(validate_capabilities(frontmatter))
     body_lines = len([line for line in body.splitlines() if line.strip()])
     if body_lines < 3:
         errors.append(f"SKILL.md body too short ({body_lines} lines)")

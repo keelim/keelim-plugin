@@ -1,6 +1,13 @@
 ---
 name: agent-instructions-improver
 description: Audit AGENTS.md quality, consolidate shared agent instruction files, or apply approved targeted updates to AGENTS.md, CLAUDE.md, GEMINI.md, Copilot instructions, Cursor rules, and project operating guides. Use for durable session-to-instructions capture or explicit agent-instruction quality work, not simple file lookup. Reports quality findings before proposing updates.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: false
 ---
 
 # Agent Instructions Improver

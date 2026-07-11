@@ -9,7 +9,7 @@ A personal skill collection for both Codex and Claude.
 
 ## Repository layout
 - `skills/`: skill source folders
-- `skills/<skill-name>/SKILL.md`: the main skill document
+- `skills/<skill-name>/SKILL.md`: the main skill document with its required machine-readable capability contract
 - `skills/<skill-name>/agents/openai.yaml`: optional Codex UI metadata
 - `CATALOG.md`: generated human-readable skill catalog and install matrix
 - `catalog.json`: generated machine-readable skill catalog for automation
@@ -21,6 +21,13 @@ A personal skill collection for both Codex and Claude.
 The bullet list below is a compact README orientation. The canonical
 user-facing trigger and catalog description for each skill lives in that skill's
 `SKILL.md` frontmatter and is regenerated into `CATALOG.md` / `catalog.json`.
+
+Every skill also declares these boolean capabilities in frontmatter:
+`read_only`, `local_write`, `network_read`, `external_write`, `credentials`,
+and `hooks`. The generated catalogs expose the same values so an agent or
+operator can inspect side-effect and trust requirements before invocation.
+`read_only: true` cannot be combined with local writes, external writes, or
+hooks; `scripts/verify_skills.py` enforces the complete schema.
 
 - `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files, including durable session-to-AGENTS.md updates, that reports quality findings before proposing targeted changes
 - `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
@@ -84,7 +91,7 @@ uv --cache-dir .skillopt/uv-cache cache prune
 
 When adding or renaming a skill:
 
-1. Create or move `skills/<skill-name>/SKILL.md` with frontmatter `name` matching the folder and a concise `description`.
+1. Create or move `skills/<skill-name>/SKILL.md` with frontmatter `name` matching the folder, a concise `description`, and all six boolean `capabilities` fields.
 2. Add `agents/openai.yaml` when the skill should be visible in Codex UI surfaces.
 3. Keep supporting files inside that skill's `references/`, `scripts/`, `assets/`, `examples/`, or `hooks/` directories.
 4. Update the README `Current skills` list only as a compact orientation; keep the `SKILL.md` frontmatter as the catalog source of truth.

@@ -1,6 +1,13 @@
 ---
 name: session-usage-dashboard
 description: Build a secure offline HTML dashboard and JSON summary from Codex and Claude session JSONL logs. Use when the user wants to track agent tool usage, skill invocations, subagent kinds, session harness activity, or usage counts for Codex/Claude runs without exposing raw prompts, tool arguments, or tool outputs.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: false
 ---
 
 # Session Usage Dashboard

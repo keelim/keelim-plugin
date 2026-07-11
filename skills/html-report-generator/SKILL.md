@@ -1,6 +1,13 @@
 ---
 name: html-report-generator
 description: Generate secure offline HTML reports from generic block-model JSON using a reusable template, stdlib Python renderer, and offline/security validation. Use when the user wants a local standalone HTML report, a reusable HTML report foundation, or validation that a generated report does not use CDNs or external communication.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: false
 ---
 
 # HTML Report Generator

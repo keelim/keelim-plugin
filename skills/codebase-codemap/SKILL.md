@@ -1,6 +1,13 @@
 ---
 name: codebase-codemap
 description: Generate and refresh concise, source-led codebase maps for repositories. Use when the user explicitly asks for a codemap, code map, repo map, architecture snapshot, source inventory, agent context file, or docs/CODEMAPS update.
+capabilities:
+  read_only: false
+  local_write: true
+  network_read: false
+  external_write: false
+  credentials: false
+  hooks: false
 ---
 
 # Codebase Codemap
