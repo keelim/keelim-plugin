@@ -31,10 +31,10 @@ hooks; `scripts/verify_skills.py` enforces the complete schema.
 
 - `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files, including durable session-to-AGENTS.md updates, that reports quality findings before proposing targeted changes
 - `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
+- `codex-insights`: an evidence-backed session reflection workflow with concise insight reports, skill/subagent recommendations, candidate promotion, and optional metadata-only observation hooks
 - `html-report-generator`: a reusable offline HTML report foundation with generic block-model JSON, a stdlib renderer, template asset, and security validation
 - `jira-ticket-desk`: a read-only Jira triage workflow that merges local ticket rules and renders a secure offline HTML desk from a reusable template plus JSON data
 - `release-automation`: a date-based Android release workflow for updating `versionCode`, checking the release PR, and dispatching `app_deploy.yml` with `dry-run`, `confirm`, and `execute` modes
-- `session-learning`: a conservative Hermes-inspired workflow for hook-based observations, ad hoc session pattern scans, skill/subagent recommendations, promotion, and curator cleanup
 - `session-usage-dashboard`: a Codex/Claude session analyzer that renders offline HTML and JSON usage dashboards for tools, skills, and subagents
 - `tech-post-maker`: a writing skill for first-person technical posts in a calm personal engineer voice, especially build logs, case studies, workflow write-ups, and series posts
 
@@ -186,17 +186,17 @@ This installs the skill into:
 upstream skill changes, or use manual symlinks while actively developing against
 this checkout.
 
-For `session-learning`, preview and apply project-scoped hook registration after installing the skill:
+For `codex-insights`, preview and apply project-scoped hook registration after installing the skill:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py
-uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/codex-insights/scripts/install_hooks.py
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/codex-insights/scripts/install_hooks.py --apply
 ```
 
-To install `session-learning` hooks globally for every project:
+To install `codex-insights` hooks globally for every project:
 
 ```bash
-uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/session-learning/scripts/install_hooks.py --scope global --apply
+uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python .agents/skills/codex-insights/scripts/install_hooks.py --scope global --apply
 ```
 
 If you prefer the full GitHub URL form, this also works:

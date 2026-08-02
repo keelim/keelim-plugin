@@ -1,7 +1,0 @@
-interface:
-  display_name: "Session Learning"
-  short_description: "Promote session lessons, skills, and subagent ideas"
-  default_prompt: "Use $session-learning to inspect recent session patterns and recommend durable skill, custom subagent, doc, or archive actions."
-
-policy:
-  allow_implicit_invocation: true

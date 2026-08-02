@@ -64,6 +64,40 @@
       }
     },
     {
+      "name": "codex-insights",
+      "path": "skills/codex-insights",
+      "skillFile": "skills/codex-insights/SKILL.md",
+      "codexMetaFile": "skills/codex-insights/agents/openai.yaml",
+      "description": "Extract evidence-backed engineering insights from current or recent Codex and Claude sessions, produce concise reflections, detect repeated workflows, and route durable lessons to docs, skills, subagents, or project instructions. Use after completing a feature, complex bug fix, technology investigation, or multi-step task; when the user asks for insights, reflection, session patterns, weekly learnings, automation opportunities, or skill candidates; or when opt-in session observation hooks need installation or review.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "network_read": false,
+        "external_write": false,
+        "credentials": false,
+        "hooks": true
+      },
+      "hasCodexMeta": true,
+      "resources": [
+        "scripts/",
+        "hooks/"
+      ],
+      "quickStart": "Use $codex-insights after a meaningful engineering task, or preview hooks with .agents/skills/codex-insights/scripts/install_hooks.py.",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codex-insights/scripts/test_install_hooks.py"
+      ],
+      "postInstall": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --apply",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --status"
+      ],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill codex-insights -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/codex-insights\" ~/.agents/skills/codex-insights",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/codex-insights\" ~/.claude/skills/codex-insights"
+      }
+    },
+    {
       "name": "html-report-generator",
       "path": "skills/html-report-generator",
       "skillFile": "skills/html-report-generator/SKILL.md",
@@ -151,40 +185,6 @@
         "cli": "npx skills add keelim/keelim-plugin --skill release-automation -a codex -a claude-code -y --copy",
         "symlinkCodex": "ln -s \"$(pwd)/skills/release-automation\" ~/.agents/skills/release-automation",
         "symlinkClaude": "ln -s \"$(pwd)/skills/release-automation\" ~/.claude/skills/release-automation"
-      }
-    },
-    {
-      "name": "session-learning",
-      "path": "skills/session-learning",
-      "skillFile": "skills/session-learning/SKILL.md",
-      "codexMetaFile": "skills/session-learning/agents/openai.yaml",
-      "description": "Capture session observations through opt-in hooks, inspect recent Codex or Claude sessions for repeated workflows, and promote stable lessons into AGENTS.md, README.md, skills, custom subagent recommendations, or docs without letting hooks mutate canonical project files directly.",
-      "capabilities": {
-        "read_only": false,
-        "local_write": true,
-        "network_read": false,
-        "external_write": false,
-        "credentials": false,
-        "hooks": true
-      },
-      "hasCodexMeta": true,
-      "resources": [
-        "scripts/",
-        "hooks/"
-      ],
-      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
-      "verification": [
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py"
-      ],
-      "postInstall": [
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply",
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status"
-      ],
-      "install": {
-        "cli": "npx skills add keelim/keelim-plugin --skill session-learning -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s \"$(pwd)/skills/session-learning\" ~/.agents/skills/session-learning",
-        "symlinkClaude": "ln -s \"$(pwd)/skills/session-learning\" ~/.claude/skills/session-learning"
       }
     },
     {
