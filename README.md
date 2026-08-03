@@ -32,6 +32,7 @@ hooks; `scripts/verify_skills.py` enforces the complete schema.
 - `agent-instructions-improver`: an audit-and-improve workflow for AGENTS.md and related agent instruction files, including durable session-to-AGENTS.md updates, that reports quality findings before proposing targeted changes
 - `codebase-codemap`: a source-led repository mapping workflow with a stdlib generator for project-named agent codemaps
 - `codex-insights`: an evidence-backed session reflection workflow with concise insight reports, skill/subagent recommendations, candidate promotion, and optional metadata-only observation hooks
+- `easy-release-note-video-pipeline`: an end-to-end release-note Shorts workflow for distinct motion concepts, Google Vids voiceover muxing, and verified private YouTube or Naver Clip drafts
 - `html-report-generator`: a reusable offline HTML report foundation with generic block-model JSON, a stdlib renderer, template asset, and security validation
 - `jira-ticket-desk`: a read-only Jira triage workflow that merges local ticket rules and renders a secure offline HTML desk from a reusable template plus JSON data
 - `release-automation`: a date-based Android release workflow for updating `versionCode`, checking the release PR, and dispatching `app_deploy.yml` with `dry-run`, `confirm`, and `execute` modes

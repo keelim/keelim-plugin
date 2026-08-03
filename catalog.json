@@ -2,7 +2,7 @@
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "generatedBy": "scripts/gen-catalog.mjs",
   "source": "keelim/keelim-plugin",
-  "count": 8,
+  "count": 9,
   "skills": [
     {
       "name": "agent-instructions-improver",
@@ -95,6 +95,33 @@
         "cli": "npx skills add keelim/keelim-plugin --skill codex-insights -a codex -a claude-code -y --copy",
         "symlinkCodex": "ln -s \"$(pwd)/skills/codex-insights\" ~/.agents/skills/codex-insights",
         "symlinkClaude": "ln -s \"$(pwd)/skills/codex-insights\" ~/.claude/skills/codex-insights"
+      }
+    },
+    {
+      "name": "easy-release-note-video-pipeline",
+      "path": "skills/easy-release-note-video-pipeline",
+      "skillFile": "skills/easy-release-note-video-pipeline/SKILL.md",
+      "codexMetaFile": "skills/easy-release-note-video-pipeline/agents/openai.yaml",
+      "description": "Use when turning an official article or release note into an Easy Release Note short-form video through a distinct motion-graphics concept, bilingual or requested-language renders, Google Vids voiceover extraction and local mux, and private YouTube or Naver Clip draft upload with live verification.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "network_read": true,
+        "external_write": true,
+        "credentials": true,
+        "hooks": false
+      },
+      "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Read SKILL.md and invoke the skill for its documented task.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill easy-release-note-video-pipeline -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.agents/skills/easy-release-note-video-pipeline",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.claude/skills/easy-release-note-video-pipeline"
       }
     },
     {
