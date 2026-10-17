@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -149,8 +150,9 @@ def test_find_current_codex_respects_scan_limit(monkeypatch=None) -> None:
         new = sessions / "new.jsonl"
         write_jsonl(old, [{"type": "session_meta", "payload": {"cwd": "/wanted"}}])
         write_jsonl(new, [{"type": "session_meta", "payload": {"cwd": "/other"}}])
-        old.touch()
-        new.touch()
+        # Consecutive touches can share a timestamp on coarse filesystems.
+        os.utime(old, (1_700_000_000, 1_700_000_000))
+        os.utime(new, (1_700_000_060, 1_700_000_060))
         original_home = Path.home
         Path.home = classmethod(lambda cls: root)  # type: ignore[method-assign]
         try:
