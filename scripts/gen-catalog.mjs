@@ -63,16 +63,16 @@ const SKILL_GUIDANCE = {
     quickStart: 'Use dry-run mode first in a repo with gradle/libs.versions.toml and app_deploy.yml.',
     verification: [GENERIC_VERIFY]
   },
-  'session-learning': {
+  'codex-insights': {
     quickStart:
-      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py',
+      'Use $codex-insights after a meaningful engineering task, or preview hooks with .agents/skills/codex-insights/scripts/install_hooks.py.',
     verification: [
-      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py'
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codex-insights/scripts/test_install_hooks.py'
     ],
     postInstall: [
-      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py',
-      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply',
-      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status'
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py',
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --apply',
+      'uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --status'
     ]
   },
   'session-usage-dashboard': {

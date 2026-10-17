@@ -1,39 +1,49 @@
-# keelim-plugin Agent Guide
+# keelim-plugin working guide
 
-## Purpose
+The maintained source for reusable local Codex and Claude skills. Each workflow keeps its own capabilities and safety contract; repository tooling validates catalogs and reviews promotion candidates.
 
-This repo is the source of truth for reusable local skills used by Codex and Claude.
+## Project structure
 
-## Skill Layout
-
-- Keep each skill under `skills/<skill-name>/`.
-- Every skill must include `SKILL.md`.
-- Add `agents/openai.yaml` when the skill should appear cleanly in Codex UI surfaces.
-- Use `references/`, `scripts/`, and `assets/` only when they directly support the skill.
-
-## Maintenance Rules
-
-- Update `README.md` `Current skills` whenever adding, renaming, or removing a skill.
-- Prefer repo-local skill folders plus user-scope symlinks over duplicated copies.
-- After changing skills, verify paths and run `git diff --check`.
-
-## CodeGraph Search
-
-When working from the `keelim-maestro` workspace root, use the root dispatcher
-instead of a root aggregate graph:
-
-```bash
-bun run cg -- context keelim-plugin "<task>"
-bun run cg -- query keelim-plugin <symbol>
-bun run cg -- files keelim-plugin --max-depth 2
+```text
+./
+├── AGENTS.md → Working guide
+├── CLAUDE.md → Same guide for Claude
+├── docs/
+│   ├── architecture.md → Components and data flow
+│   ├── business-rules.md → Domain meaning and edge cases
+│   ├── security.md → Access, credentials, and protected data
+│   ├── standards.md → Change and verification rules
+│   ├── engineering-notes.md → Operational traps
+│   ├── operations.md → Setup and scoped commands
+│   ├── contracts.md → Consumer inputs, outputs, and failures
+│   └── tracking/
+│       ├── status.md → Capabilities and verified scope
+│       ├── findings.md → Unresolved issues
+│       └── decisions/
+│           ├── index.md → Decision index
+│           ├── 0001-single-source-skills.md → One source with explicit installed copies
+│           └── 0002-review-before-promotion.md → Compare candidates before applying
+├── skills/
+│   └── AGENTS.md → Reusable workflow sources
+├── scripts/
+│   └── AGENTS.md → Catalog and promotion tooling
+└── evals/
+    └── AGENTS.md → Evaluation fixtures
 ```
 
-If an AI starts inside this repo directly, first check `/Users/keelim/Desktop/keelim-maestro`
-for the dispatcher and prefer its child-targeted `--path` calls. Do not initialize
-or rely on a workspace-root `.codegraph/` that mixes child repositories.
+## Hard gates
 
-## Boundaries
+1. Preserve each skill’s declared effects and workflow-specific safety gates.
+2. Review requests inspect evidence without executing the production workflow.
+3. Keep one maintained source per skill and regenerate catalogs from it.
+4. Keep secrets, session traces, and optimization output outside durable skill sources.
 
-- Keep workflows docs-first unless automation clearly improves repeatability.
-- Do not put secrets, session logs, or one-off task status into skill files.
-- Preserve this repo as a skill collection; avoid mixing unrelated workspace maintenance into skill changes.
+## Before work
+
+Read `docs/standards.md`, `docs/engineering-notes.md`, and the closest module guide.
+
+Before a skill edit read its `SKILL.md` and only the references used by the changed step. Before promotion inspect `scripts/promote_plugin_skills.py` and the candidate diff; use `pyproject.toml` and `scripts/check.sh` for the current verification contract. Before installation inspect whether the destination is a link or a copy.
+
+## Problem routing
+
+Immediately report secret/session-data exposure, unauthorized hook installation or external writes, and a promotion that removed a safety gate. Record other unresolved issues in `docs/tracking/findings.md` with the skill and failing check.

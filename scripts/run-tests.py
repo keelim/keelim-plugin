@@ -53,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     checks.extend([[sys.executable, str(path.relative_to(REPO_ROOT))] for path in test_files()])
     checks.extend(
         [
+            [sys.executable, "scripts/verify_plugin.py"],
             ["bash", "scripts/verify-skills.sh"],
             ["node", "scripts/gen-catalog.mjs", "--check"],
         ]

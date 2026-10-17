@@ -2,7 +2,7 @@
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "generatedBy": "scripts/gen-catalog.mjs",
   "source": "keelim/keelim-plugin",
-  "count": 8,
+  "count": 10,
   "skills": [
     {
       "name": "agent-instructions-improver",
@@ -61,6 +61,94 @@
         "cli": "npx skills add keelim/keelim-plugin --skill codebase-codemap -a codex -a claude-code -y --copy",
         "symlinkCodex": "ln -s \"$(pwd)/skills/codebase-codemap\" ~/.agents/skills/codebase-codemap",
         "symlinkClaude": "ln -s \"$(pwd)/skills/codebase-codemap\" ~/.claude/skills/codebase-codemap"
+      }
+    },
+    {
+      "name": "codex-insights",
+      "path": "skills/codex-insights",
+      "skillFile": "skills/codex-insights/SKILL.md",
+      "codexMetaFile": "skills/codex-insights/agents/openai.yaml",
+      "description": "Extract evidence-backed engineering insights from current or recent Codex and Claude sessions, produce concise reflections, detect repeated workflows, and route durable lessons to docs, skills, subagents, or project instructions. Use after completing a feature, complex bug fix, technology investigation, or multi-step task; when the user asks for insights, reflection, session patterns, weekly learnings, automation opportunities, or skill candidates; or when opt-in session observation hooks need installation or review.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "network_read": false,
+        "external_write": false,
+        "credentials": false,
+        "hooks": true
+      },
+      "hasCodexMeta": true,
+      "resources": [
+        "scripts/",
+        "hooks/"
+      ],
+      "quickStart": "Use $codex-insights after a meaningful engineering task, or preview hooks with .agents/skills/codex-insights/scripts/install_hooks.py.",
+      "verification": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/codex-insights/scripts/test_install_hooks.py"
+      ],
+      "postInstall": [
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --apply",
+        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/codex-insights/scripts/install_hooks.py --status"
+      ],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill codex-insights -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/codex-insights\" ~/.agents/skills/codex-insights",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/codex-insights\" ~/.claude/skills/codex-insights"
+      }
+    },
+    {
+      "name": "easy-release-note-video-pipeline",
+      "path": "skills/easy-release-note-video-pipeline",
+      "skillFile": "skills/easy-release-note-video-pipeline/SKILL.md",
+      "codexMetaFile": "skills/easy-release-note-video-pipeline/agents/openai.yaml",
+      "description": "Use when turning an official article or release note into an Easy Release Note short-form video through a distinct motion-graphics concept, bilingual or requested-language renders, Google Vids voiceover extraction and local mux, and private YouTube or Naver Clip draft upload with live verification.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "network_read": true,
+        "external_write": true,
+        "credentials": true,
+        "hooks": false
+      },
+      "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Read SKILL.md and invoke the skill for its documented task.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill easy-release-note-video-pipeline -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.agents/skills/easy-release-note-video-pipeline",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.claude/skills/easy-release-note-video-pipeline"
+      }
+    },
+    {
+      "name": "eli5",
+      "path": "skills/eli5",
+      "skillFile": "skills/eli5/SKILL.md",
+      "codexMetaFile": "skills/eli5/agents/openai.yaml",
+      "description": "Explain a topic for a beginner as a standalone visual HTML page, using ASD-STE100-inspired clarity principles while preserving necessary conditions and evidence. Use for `/eli5`, a simple visual explanation, or an ASD-STE100-inspired HTML explainer.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "external_write": false,
+        "network_read": false,
+        "credentials": false,
+        "hooks": false
+      },
+      "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Read SKILL.md and invoke the skill for its documented task.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill eli5 -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/eli5\" ~/.agents/skills/eli5",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/eli5\" ~/.claude/skills/eli5"
       }
     },
     {
@@ -151,40 +239,6 @@
         "cli": "npx skills add keelim/keelim-plugin --skill release-automation -a codex -a claude-code -y --copy",
         "symlinkCodex": "ln -s \"$(pwd)/skills/release-automation\" ~/.agents/skills/release-automation",
         "symlinkClaude": "ln -s \"$(pwd)/skills/release-automation\" ~/.claude/skills/release-automation"
-      }
-    },
-    {
-      "name": "session-learning",
-      "path": "skills/session-learning",
-      "skillFile": "skills/session-learning/SKILL.md",
-      "codexMetaFile": "skills/session-learning/agents/openai.yaml",
-      "description": "Capture session observations through opt-in hooks, inspect recent Codex or Claude sessions for repeated workflows, and promote stable lessons into AGENTS.md, README.md, skills, custom subagent recommendations, or docs without letting hooks mutate canonical project files directly.",
-      "capabilities": {
-        "read_only": false,
-        "local_write": true,
-        "network_read": false,
-        "external_write": false,
-        "credentials": false,
-        "hooks": true
-      },
-      "hasCodexMeta": true,
-      "resources": [
-        "scripts/",
-        "hooks/"
-      ],
-      "quickStart": "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
-      "verification": [
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python skills/session-learning/scripts/test_install_hooks.py"
-      ],
-      "postInstall": [
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py",
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --apply",
-        "uv --cache-dir .skillopt/uv-cache run --python 3.12 python .agents/skills/session-learning/scripts/install_hooks.py --status"
-      ],
-      "install": {
-        "cli": "npx skills add keelim/keelim-plugin --skill session-learning -a codex -a claude-code -y --copy",
-        "symlinkCodex": "ln -s \"$(pwd)/skills/session-learning\" ~/.agents/skills/session-learning",
-        "symlinkClaude": "ln -s \"$(pwd)/skills/session-learning\" ~/.claude/skills/session-learning"
       }
     },
     {

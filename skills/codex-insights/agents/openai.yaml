@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Insights"
+  short_description: "Turn session evidence into reusable engineering knowledge"
+  default_prompt: "Use $codex-insights to extract evidence-backed learnings, workflow improvements, and skill candidates from this session."
+
+policy:
+  allow_implicit_invocation: true

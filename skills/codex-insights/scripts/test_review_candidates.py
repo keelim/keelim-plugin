@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the session-learning candidate review helper."""
+"""Tests for the Codex Insights candidate review helper."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-
 
 SCRIPT = Path(__file__).with_name("review_candidates.py")
 
@@ -24,18 +23,28 @@ def write_candidate(root: Path, name: str, body: str, frontmatter: str = "") -> 
     return path
 
 
-def run_review(root: Path, *extra_args: str, output_format: str = "json") -> dict | str:
+def run_review(root: Path, *extra_args: str) -> dict:
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--roots", str(root), "--format", output_format, *extra_args],
+        [sys.executable, str(SCRIPT), "--roots", str(root), "--format", "json", *extra_args],
         text=True,
         capture_output=True,
         check=False,
     )
     if result.returncode != 0:
         raise AssertionError(result.stderr)
-    if output_format == "markdown":
-        return result.stdout
     return json.loads(result.stdout)
+
+
+def run_review_markdown(root: Path, *extra_args: str) -> str:
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT), "--roots", str(root), "--format", "markdown", *extra_args],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(result.stderr)
+    return result.stdout
 
 
 class ReviewCandidatesTests(unittest.TestCase):
@@ -43,13 +52,21 @@ class ReviewCandidatesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_candidate(root, "project.md", "Remember this project route and test command.")
-            write_candidate(root, "workspace.md", "Preserve child repo autonomy across this workspace.")
-            write_candidate(root, "global.md", "This should apply to all projects as global policy.")
+            write_candidate(
+                root, "workspace.md", "Preserve child repo autonomy across this workspace."
+            )
+            write_candidate(
+                root, "global.md", "This should apply to all projects as global policy."
+            )
             write_candidate(root, "skill.md", "This is a reusable workflow with repeatable steps.")
-            write_candidate(root, "subagent.md", "This is a bounded role for repeated CI failure triage.")
+            write_candidate(
+                root, "subagent.md", "This is a bounded role for repeated CI failure triage."
+            )
             write_candidate(root, "archive.md", "This is a duplicate candidate and should archive.")
             payload = run_review(root)
-            scopes = {Path(item["path"]).name: item["promotion_scope"] for item in payload["candidates"]}
+            scopes = {
+                Path(item["path"]).name: item["promotion_scope"] for item in payload["candidates"]
+            }
             self.assertEqual(scopes["project.md"], "project")
             self.assertEqual(scopes["workspace.md"], "workspace")
             self.assertEqual(scopes["global.md"], "user-global")
@@ -67,7 +84,6 @@ class ReviewCandidatesTests(unittest.TestCase):
                 frontmatter="---\nstatus: candidate\npromotion_scope: user-global\nrecommended_target: ~/.codex/AGENTS.md\n---\n",
             )
             payload = run_review(root)
-            self.assertIsInstance(payload, dict)
             self.assertEqual(payload["candidates"][0]["promotion_scope"], "user-global")
             self.assertEqual(payload["candidates"][0]["target"], "~/.codex/AGENTS.md")
 
@@ -75,11 +91,12 @@ class ReviewCandidatesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             old_path = write_candidate(root, "old.md", "Old project-specific learning.")
-            new_path = write_candidate(root, "new.md", "New workspace child repo boundary learning.")
+            new_path = write_candidate(
+                root, "new.md", "New workspace child repo boundary learning."
+            )
             old_time = 1_600_000_000
             os.utime(old_path, (old_time, old_time))
             payload = run_review(root, "--since-days", "1")
-            self.assertIsInstance(payload, dict)
             names = {Path(item["path"]).name for item in payload["candidates"]}
             self.assertEqual(names, {new_path.name})
 
@@ -87,11 +104,9 @@ class ReviewCandidatesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             payload = run_review(root)
-            self.assertIsInstance(payload, dict)
             self.assertEqual(payload["candidates"], [])
 
-            markdown = run_review(root, output_format="markdown")
-            self.assertIsInstance(markdown, str)
+            markdown = run_review_markdown(root)
             self.assertIn("Candidates found: 0", markdown)
             self.assertIn("No candidates found.", markdown)
 

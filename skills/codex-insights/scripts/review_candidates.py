@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review session-learning candidates and suggest promotion targets.
+"""Review Codex Insights candidates and suggest promotion targets.
 
 This script is intentionally read-only. It scans `.omx/learning/candidates`
 files and prints deterministic routing recommendations; it does not edit
@@ -14,7 +14,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
 
 PROMOTION_SCOPES = {"project", "workspace", "user-global", "skill", "subagent", "archive"}
 
@@ -98,9 +97,26 @@ def classify(candidate: Candidate) -> tuple[str, str]:
         return "archive", "frontmatter marks it for archive"
 
     text = text_for_classification(candidate)
-    if any(marker in text for marker in ("should archive", "too session-specific", "one-off only", "duplicate candidate")):
+    if any(
+        marker in text
+        for marker in (
+            "should archive",
+            "too session-specific",
+            "one-off only",
+            "duplicate candidate",
+        )
+    ):
         return "archive", "candidate appears weak, duplicate, or session-specific"
-    if any(marker in text for marker in ("reusable workflow", "repeatable workflow", "procedure", "skill.md", "turn this into a skill")):
+    if any(
+        marker in text
+        for marker in (
+            "reusable workflow",
+            "repeatable workflow",
+            "procedure",
+            "skill.md",
+            "turn this into a skill",
+        )
+    ):
         return "skill", "candidate describes a reusable procedure"
     if any(
         marker in text
@@ -117,9 +133,22 @@ def classify(candidate: Candidate) -> tuple[str, str]:
         )
     ):
         return "subagent", "candidate describes a bounded role or investigation"
-    if any(marker in text for marker in ("user-global", "all projects", "every project", "global policy", "~/.codex")):
+    if any(
+        marker in text
+        for marker in ("user-global", "all projects", "every project", "global policy", "~/.codex")
+    ):
         return "user-global", "candidate applies across projects"
-    if any(marker in text for marker in ("workspace", "child repo", "root repo", "multi-repo", "repo boundary", "monorepo")):
+    if any(
+        marker in text
+        for marker in (
+            "workspace",
+            "child repo",
+            "root repo",
+            "multi-repo",
+            "repo boundary",
+            "monorepo",
+        )
+    ):
         return "workspace", "candidate affects workspace or repo-boundary behavior"
     return "project", "candidate appears project-specific or needs local review"
 
@@ -134,7 +163,7 @@ def recommend(candidate: Candidate) -> Recommendation:
 
 def render_markdown(recommendations: list[Recommendation], roots: list[Path]) -> str:
     lines = [
-        "# Session Learning Candidate Review",
+        "# Codex Insights Candidate Review",
         "",
         f"- Roots scanned: {', '.join(str(root) for root in roots)}",
         f"- Candidates found: {len(recommendations)}",
@@ -170,7 +199,12 @@ def render_json(recommendations: list[Recommendation], roots: list[Path]) -> str
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--roots", nargs="+", default=["."], help="Project roots to scan.")
-    parser.add_argument("--since-days", type=int, default=None, help="Only include candidates modified within N days.")
+    parser.add_argument(
+        "--since-days",
+        type=int,
+        default=None,
+        help="Only include candidates modified within N days.",
+    )
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     return parser.parse_args()
 

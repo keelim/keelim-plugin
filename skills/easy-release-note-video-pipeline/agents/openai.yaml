@@ -1,0 +1,7 @@
+interface:
+  display_name: "Easy Release Note Video Pipeline"
+  short_description: "Produce, mux, and stage release-note Shorts"
+  default_prompt: "Use $easy-release-note-video-pipeline to turn a verified release note into distinct language-coded Shorts, add Google Vids voiceover when requested, and save authorized platform uploads as private drafts."
+
+policy:
+  allow_implicit_invocation: true

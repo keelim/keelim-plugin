@@ -1,0 +1,4 @@
+interface:
+  display_name: "ELI5 Picture Explainer"
+  short_description: "Create a simple visual HTML explanation"
+  default_prompt: "Use $eli5 to explain this topic as a simple visual HTML page: $ARGUMENTS"

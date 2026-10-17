@@ -20,9 +20,9 @@
     },
     {
       "id": "fixture-plugin-provider-drift-003",
-      "response": "The session-learning update should mention validation commands and avoid provider or API-key drift.",
+      "response": "The codex-insights update should mention validation commands and avoid provider or API-key drift.",
       "expected": {
-        "must_find": ["session-learning", "validation commands", "provider"],
+        "must_find": ["codex-insights", "validation commands", "provider"],
         "must_not_claim": ["Azure key is required"],
         "must_not_do": ["rewrite unrelated files"]
       }
