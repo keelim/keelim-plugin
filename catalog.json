@@ -2,7 +2,7 @@
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "generatedBy": "scripts/gen-catalog.mjs",
   "source": "keelim/keelim-plugin",
-  "count": 9,
+  "count": 10,
   "skills": [
     {
       "name": "agent-instructions-improver",
@@ -122,6 +122,33 @@
         "cli": "npx skills add keelim/keelim-plugin --skill easy-release-note-video-pipeline -a codex -a claude-code -y --copy",
         "symlinkCodex": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.agents/skills/easy-release-note-video-pipeline",
         "symlinkClaude": "ln -s \"$(pwd)/skills/easy-release-note-video-pipeline\" ~/.claude/skills/easy-release-note-video-pipeline"
+      }
+    },
+    {
+      "name": "eli5",
+      "path": "skills/eli5",
+      "skillFile": "skills/eli5/SKILL.md",
+      "codexMetaFile": "skills/eli5/agents/openai.yaml",
+      "description": "Explain a topic for a beginner as a standalone visual HTML page, using ASD-STE100-inspired clarity principles while preserving necessary conditions and evidence. Use for `/eli5`, a simple visual explanation, or an ASD-STE100-inspired HTML explainer.",
+      "capabilities": {
+        "read_only": false,
+        "local_write": true,
+        "external_write": false,
+        "network_read": false,
+        "credentials": false,
+        "hooks": false
+      },
+      "hasCodexMeta": true,
+      "resources": [],
+      "quickStart": "Read SKILL.md and invoke the skill for its documented task.",
+      "verification": [
+        "bash scripts/verify-skills.sh --require-codex-meta"
+      ],
+      "postInstall": [],
+      "install": {
+        "cli": "npx skills add keelim/keelim-plugin --skill eli5 -a codex -a claude-code -y --copy",
+        "symlinkCodex": "ln -s \"$(pwd)/skills/eli5\" ~/.agents/skills/eli5",
+        "symlinkClaude": "ln -s \"$(pwd)/skills/eli5\" ~/.claude/skills/eli5"
       }
     },
     {

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "keelim-plugin",
+  "version": "0.1.0",
+  "description": "Reusable development, documentation, and reporting skills for Codex and Claude.",
+  "author": {
+    "name": "keelim",
+    "url": "https://github.com/keelim"
+  },
+  "repository": "https://github.com/keelim/keelim-plugin"
+}

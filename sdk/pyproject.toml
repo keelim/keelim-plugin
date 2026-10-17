@@ -1,0 +1,16 @@
+[project]
+name = "keelim-codex-sdk"
+version = "0.1.0"
+description = "Minimal example project for the official OpenAI Codex Python SDK"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "openai-codex==0.162.1",
+]
+
+[project.scripts]
+keelim-codex-sdk = "keelim_codex_sdk:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
