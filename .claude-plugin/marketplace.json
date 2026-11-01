@@ -1,0 +1,18 @@
+{
+  "name": "keelim-mods",
+  "owner": {
+    "name": "keelim",
+    "url": "https://github.com/keelim"
+  },
+  "metadata": {
+    "description": "Opt-in Claude Code mods (function hooks) maintained beside the keelim-plugin skills."
+  },
+  "plugins": [
+    {
+      "name": "env-guard",
+      "source": "./mods/env-guard",
+      "description": "Denies Read, Edit, and Write calls on .env files.",
+      "category": "security"
+    }
+  ]
+}

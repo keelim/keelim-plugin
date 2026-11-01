@@ -1,0 +1,10 @@
+{
+  "name": "env-guard",
+  "version": "0.1.0",
+  "description": "Claude Code mod that denies Read, Edit, and Write calls on .env files.",
+  "author": {
+    "name": "keelim",
+    "url": "https://github.com/keelim"
+  },
+  "repository": "https://github.com/keelim/keelim-plugin"
+}

@@ -10,5 +10,7 @@ Agent hosts consume `skills/<name>/SKILL.md` with `name`, `description`, and a s
 | `scripts/promote_plugin_skills.py inventory` through uv | Existing source skills | Available promotion scope; no model call |
 | `promote [--skill name] [--candidate path]` | Candidate workflow or optimizer output | Diff/comparison; production source changes only with explicit `--apply` |
 | `bash scripts/check.sh` | Locked dev environment and repository sources | CI-equivalent local checks; first failing command stops successful completion |
+| `python3 scripts/verify_mods.py` | `.claude-plugin/marketplace.json` and `mods/*` | Unlisted mod, name mismatch, non-`./mods/<name>` source, or hooks module outside its mod fails |
+| `claude plugin validate\|test mods/<name>` | One mod folder; Claude Code CLI | Engine's manifest/hook report or test results; local only, not run in CI |
 
 Catalogs expose the same capabilities as their source. Installation by a symlink follows changes; CLI `--copy` produces a snapshot. Hook installers have preview and explicit apply paths; a local result cannot establish host hook execution or remote credential readiness.

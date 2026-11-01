@@ -8,6 +8,7 @@ Protect credentials, private source material, session content, model traces, and
 | Local source edit or candidate application | Authorized scope and reviewed diff | Successful optimization score alone |
 | External write or credential action | Owning skill's specific authorization and authenticated target | Capability metadata or installation |
 | Hook installation | Explicit requested scope and reviewed registration | Merely validating hook files |
+| Mod installation | Explicit request naming the mod and its declared effects in `mods/AGENTS.md` | Marketplace listing, passing `claude plugin validate/test` |
 
 All skills declare boolean `read_only`, `local_write`, `network_read`, `external_write`, `credentials`, and `hooks`. Preserve accurate effect declarations and each skill's own safety gates. Do not add secrets, raw session logs, or one-off task status to durable workflow files. Keep optimization traces and candidates in ignored `.skillopt/` and redact evaluation material.
 

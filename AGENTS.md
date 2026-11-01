@@ -22,7 +22,11 @@ The maintained source for reusable local Codex and Claude skills. Each workflow 
 │       └── decisions/
 │           ├── index.md → Decision index
 │           ├── 0001-single-source-skills.md → One source with explicit installed copies
-│           └── 0002-review-before-promotion.md → Compare candidates before applying
+│           ├── 0002-review-before-promotion.md → Compare candidates before applying
+│           └── 0003-separate-mod-plugins.md → Mods as separate opt-in plugins
+├── .claude-plugin/marketplace.json → Claude Code mod marketplace
+├── mods/
+│   └── AGENTS.md → Claude Code mods and their effects
 ├── skills/
 │   └── AGENTS.md → Reusable workflow sources
 ├── scripts/
@@ -37,6 +41,7 @@ The maintained source for reusable local Codex and Claude skills. Each workflow 
 2. Review requests inspect evidence without executing the production workflow.
 3. Keep one maintained source per skill and regenerate catalogs from it.
 4. Keep secrets, session traces, and optimization output outside durable skill sources.
+5. Keep Claude Code mods in `mods/<name>/` with declared effects; never add hooks to the root package.
 
 ## Before work
 

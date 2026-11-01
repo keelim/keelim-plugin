@@ -7,3 +7,5 @@ The catalog generator reads skill front matter and emits `CATALOG.md` plus `cata
 A maintainer edits a workflow or bundled resource, refreshes the catalog, validates contracts, and inspects the candidate before promotion. Promotion compares candidates to source and applies only through the explicit apply path. Installation then exposes a symlink or copy to an agent host. File validation establishes packaging, not live model, credential, hook, renderer, or external-write readiness.
 
 External connections are skill-specific: Jira reads, release automation, media services, and publishing have separate trust boundaries. The collection does not combine their credentials or grant one skill another skill's authority.
+
+`mods/<name>/` holds Claude Code mods: opt-in function-hook plugins listed by `.claude-plugin/marketplace.json`, separate from the skills-only root package (decision 0003). Engine checks (`claude plugin validate`, `claude plugin test`) establish packaging and hook logic, not behaviour in a live session.

@@ -18,3 +18,7 @@ __pycache__/
 
 # Local review state and backups
 .dryforge/
+
+# Claude Code mods: declarations and tsconfig the engine lays beside a mod it loads
+mods/*/.claude-plugin/types/
+mods/*/tsconfig.json

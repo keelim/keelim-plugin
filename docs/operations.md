@@ -19,3 +19,5 @@ uv --cache-dir .skillopt/uv-cache run --python 3.12 --group dev python scripts/p
 ```
 
 For an authorized application, supply the reviewed skill/candidate and `--apply`. Candidate preparation and optimizer execution can use model access and produce traces; they are not documentation checks. No shared database or product deployment is required to maintain this collection. Global installation, hook registration, and external personal-skill updates are separate requested actions.
+
+Claude Code mods under `mods/` are checked with `claude plugin validate mods/<name>` and `claude plugin test mods/<name>` where the CLI is installed; `scripts/check.sh` runs the offline `scripts/verify_mods.py`. Loading a mod with `--plugin-dir` or installing it is a separate requested action (`mods/AGENTS.md`).

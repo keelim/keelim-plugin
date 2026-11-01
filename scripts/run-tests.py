@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     checks.extend(
         [
             [sys.executable, "scripts/verify_plugin.py"],
+            [sys.executable, "scripts/verify_mods.py"],
             ["bash", "scripts/verify-skills.sh"],
             ["node", "scripts/gen-catalog.mjs", "--check"],
         ]
